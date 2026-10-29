@@ -46,37 +46,70 @@ class LangGraphRecommenderAgent:
         self.recommender = recommender_instance
         self.gemini_model_name = "gemini-2.5-flash"
         self.gemini_client = None
+        self.langchain_llm = None
         self._init_gemini()
         self.workflow = self._build_graph()
 
     def _init_gemini(self):
-        """Initializes Google GenAI client if GEMINI_API_KEY is present."""
+        """Initializes Google GenAI / LangChain client and configures LangSmith tracing."""
         load_dotenv()
-        key = os.getenv("GEMINI_API_KEY", "").strip()
+
+        # LangSmith / LangChain Tracing Setup
+        smith_key = os.getenv("LANGSMITH_API_KEY") or os.getenv("LANGCHAIN_API_KEY")
+        if smith_key:
+            os.environ["LANGCHAIN_TRACING_V2"] = "true"
+            os.environ["LANGCHAIN_API_KEY"] = smith_key
+            os.environ["LANGSMITH_API_KEY"] = smith_key
+            os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT") or "Personalized-Research-Paper-Recommendation"
+            os.environ["LANGCHAIN_ENDPOINT"] = os.getenv("LANGSMITH_ENDPOINT") or "https://api.smith.langchain.com"
+            print("LangSmith Cloud Tracing active (Project: Personalized-Research-Paper-Recommendation)!")
+
+        key = (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or "").strip()
         if key and not key.startswith("your_") and len(key) > 10:
             try:
                 from google import genai
                 self.gemini_client = genai.Client(api_key=key)
-                print(f"Google Gemini LLM Agent active ({self.gemini_model_name})!")
+                print(f"Google Gemini GenAI Client active ({self.gemini_model_name})!")
             except Exception as e:
                 print("Gemini client initialization notice:", e)
 
-    def _call_gemini_advisor(self, prompt: str) -> Optional[str]:
-        """Calls Google Gemini model with graceful fallback on error."""
-        if not self.gemini_client:
-            self._init_gemini()
-        if not self.gemini_client:
-            return None
+            try:
+                from langchain_google_genai import ChatGoogleGenerativeAI
+                self.langchain_llm = ChatGoogleGenerativeAI(
+                    model=self.gemini_model_name,
+                    google_api_key=key,
+                    temperature=0.2
+                )
+                print(f"LangChain Google GenAI Agent active!")
+            except Exception as e:
+                print("LangChain Google GenAI wrapper notice:", e)
 
-        try:
-            response = self.gemini_client.models.generate_content(
-                model=self.gemini_model_name,
-                contents=prompt
-            )
-            return response.text.strip() if response and response.text else None
-        except Exception as e:
-            print(f"Gemini LLM call notice (falling back): {e}")
-            return None
+    def _call_gemini_advisor(self, prompt: str) -> Optional[str]:
+        """Calls Google Gemini model via LangChain with LangSmith tracing and fallback."""
+        if not self.langchain_llm and not self.gemini_client:
+            self._init_gemini()
+
+        # 1. Try LangChain LLM (enables LangSmith trace recording)
+        if self.langchain_llm:
+            try:
+                res = self.langchain_llm.invoke(prompt)
+                if res and res.content:
+                    return str(res.content).strip()
+            except Exception as e:
+                print(f"LangChain Gemini invocation notice: {e}")
+
+        # 2. Direct Google GenAI fallback
+        if self.gemini_client:
+            try:
+                response = self.gemini_client.models.generate_content(
+                    model=self.gemini_model_name,
+                    contents=prompt
+                )
+                return response.text.strip() if response and response.text else None
+            except Exception as e:
+                print(f"Direct Gemini API notice: {e}")
+
+        return None
 
     def _build_graph(self) -> Any:
         builder = StateGraph(AgentRecommendationState)
@@ -434,9 +467,10 @@ class LangGraphRecommenderAgent:
             "total_candidates_analyzed": len(final_state.get("candidates", [])),
             "recommendations": clean_recs,
             "agentic_orchestration": {
-                "framework": "LangGraph StateGraph",
-                "llm_engine": f"Google Gemini ({self.gemini_model_name})" if has_gemini else "SciBERT (Transformer)",
+                "framework": "LangGraph StateGraph + LangChain Orchestration",
+                "llm_engine": f"Google Gemini ({self.gemini_model_name}) via LangChain" if has_gemini else "SciBERT (Transformer)",
                 "gemini_active": has_gemini,
+                "langsmith_tracing": bool(os.getenv("LANGCHAIN_API_KEY") or os.getenv("LANGSMITH_API_KEY")),
                 "total_execution_ms": total_time_ms,
                 "summary": final_state.get("agent_summary"),
                 "ai_advisor_synthesis": final_state.get("gemini_synthesis"),
