@@ -58,6 +58,11 @@
           LangGraph Agent Active
         </span>
 
+        <span id="gemini-status-badge" class="hidden inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+          <i class="fa-solid fa-wand-magic-sparkles text-cyan-400 text-[11px]"></i>
+          Gemini 2.5 Active
+        </span>
+
         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
           <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
           GraphSAGE + SciBERT
@@ -207,6 +212,18 @@
             </button>
           </div>
           <p id="agent-summary-text" class="text-xs text-slate-300 leading-relaxed"></p>
+
+          <!-- Gemini AI Advisor Synthesis Box -->
+          <div id="gemini-advisor-box" class="hidden p-4 rounded-xl bg-gradient-to-r from-indigo-950/70 via-purple-950/40 to-slate-900 border border-indigo-500/40 space-y-2 shadow-lg">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-wand-magic-sparkles text-cyan-400 text-xs"></i> Google Gemini AI Research Advisor Synthesis
+              </span>
+              <span class="text-[10px] uppercase font-mono font-semibold tracking-wider text-cyan-300 bg-cyan-950/80 border border-cyan-800/80 px-2 py-0.5 rounded-full">gemini-2.5-flash</span>
+            </div>
+            <p id="gemini-synthesis-text" class="text-xs text-slate-200 leading-relaxed font-sans"></p>
+          </div>
+
           <div id="agent-steps-list" class="hidden grid grid-cols-1 md:grid-cols-4 gap-3 pt-3 border-t border-slate-800">
             <!-- Dynamically populated with 4 agent nodes -->
           </div>
@@ -713,6 +730,18 @@
         traceBanner.classList.remove('hidden');
         document.getElementById('agent-runtime-badge').innerText = `${orchestration.total_execution_ms} ms total`;
         document.getElementById('agent-summary-text').innerText = orchestration.summary || "LangGraph Agentic StateGraph pipeline completed successfully.";
+
+        // Render Gemini Research Advisor Synthesis if present
+        const geminiBox = document.getElementById('gemini-advisor-box');
+        const geminiStatusBadge = document.getElementById('gemini-status-badge');
+        if (orchestration.ai_advisor_synthesis) {
+          geminiBox.classList.remove('hidden');
+          document.getElementById('gemini-synthesis-text').innerText = orchestration.ai_advisor_synthesis;
+          if (geminiStatusBadge) geminiStatusBadge.classList.remove('hidden');
+        } else {
+          geminiBox.classList.add('hidden');
+          if (geminiStatusBadge) geminiStatusBadge.classList.add('hidden');
+        }
 
         const stepsList = document.getElementById('agent-steps-list');
         stepsList.innerHTML = orchestration.workflow_trace.map(st => `

@@ -7,10 +7,14 @@ Orchestrates multi-step agentic graph reasoning:
 IntentAnalysis -> SemanticRetrieval -> GraphSAGEFusion -> ExplainabilitySynthesis
 """
 
+import os
 import time
 from typing import TypedDict, List, Dict, Any, Optional
 from langgraph.graph import StateGraph, END
 import numpy as np
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class AgentRecommendationState(TypedDict):
@@ -33,13 +37,46 @@ class AgentRecommendationState(TypedDict):
     # Audit & Explainability trace
     agent_trace: List[Dict[str, Any]]
     agent_summary: str
+    gemini_synthesis: Optional[str]
     execution_time_ms: float
 
 
 class LangGraphRecommenderAgent:
     def __init__(self, recommender_instance):
         self.recommender = recommender_instance
+        self.gemini_model_name = "gemini-2.5-flash"
+        self.gemini_client = None
+        self._init_gemini()
         self.workflow = self._build_graph()
+
+    def _init_gemini(self):
+        """Initializes Google GenAI client if GEMINI_API_KEY is present."""
+        load_dotenv()
+        key = os.getenv("GEMINI_API_KEY", "").strip()
+        if key and not key.startswith("your_") and len(key) > 10:
+            try:
+                from google import genai
+                self.gemini_client = genai.Client(api_key=key)
+                print(f"Google Gemini LLM Agent active ({self.gemini_model_name})!")
+            except Exception as e:
+                print("Gemini client initialization notice:", e)
+
+    def _call_gemini_advisor(self, prompt: str) -> Optional[str]:
+        """Calls Google Gemini model with graceful fallback on error."""
+        if not self.gemini_client:
+            self._init_gemini()
+        if not self.gemini_client:
+            return None
+
+        try:
+            response = self.gemini_client.models.generate_content(
+                model=self.gemini_model_name,
+                contents=prompt
+            )
+            return response.text.strip() if response and response.text else None
+        except Exception as e:
+            print(f"Gemini LLM call notice (falling back): {e}")
+            return None
 
     def _build_graph(self) -> Any:
         builder = StateGraph(AgentRecommendationState)
@@ -313,17 +350,41 @@ class LangGraphRecommenderAgent:
             f"Mode: {intent}. Signal balance: alpha={state.get('alpha', 0.60):.2f}."
         )
 
+        # Gemini LLM Research Advisor Synthesis
+        gemini_synthesis = None
+        user_context = state.get("query") or (state.get("seed_paper") or {}).get("title") or "Academic Research Topic"
+        if recs:
+            top_papers_text = "\n".join([
+                f"{i+1}. '{r['title']}' ({r.get('year', 'N/A')}, {r.get('citationCount', 0):,} citations) - Score: {r['hybrid_score']:.1%}"
+                for i, r in enumerate(recs[:4])
+            ])
+            prompt = (
+                f"You are an expert AI Research Advisor in Computer Science and Machine Learning.\n"
+                f"A researcher is exploring: '{user_context}' (Intent: {intent}).\n\n"
+                f"Our dual-signal AI system (SciBERT semantic embeddings + GraphSAGE citation topology) ranked these top papers:\n"
+                f"{top_papers_text}\n\n"
+                f"In 2-3 concise, scholarly sentences:\n"
+                f"1. Explain how these recommended papers connect conceptually to the user's research topic.\n"
+                f"2. Explicitly recommend which single paper they should read first as the foundational anchor and why.\n"
+                f"Keep it concise, direct, and actionable."
+            )
+            gemini_synthesis = self._call_gemini_advisor(prompt)
+
+        agent_label = f"ExplainabilityAgentNode (Google Gemini 2.5 Flash)" if gemini_synthesis else "ExplainabilityAgentNode (SciBERT Rationale)"
+        action_label = "Generated Gemini LLM Literature Synthesis & Rationales" if gemini_synthesis else "Generated natural language rationales"
+
         trace.append({
             "stage": "4. Explainability & Synthesis Agent",
-            "agent": "ExplainabilityAgentNode",
-            "action": "Generated natural language rationales",
-            "detail": "Created multi-perspective explanations balancing topic relevance and citation prestige.",
+            "agent": agent_label,
+            "action": action_label,
+            "detail": "Synthesized academic literature connections and foundational reading recommendations." if gemini_synthesis else "Created multi-perspective explanations balancing topic relevance and citation prestige.",
             "duration_ms": round((time.time() - t0) * 1000, 2)
         })
 
         return {
             "recommendations": recs,
             "agent_summary": summary,
+            "gemini_synthesis": gemini_synthesis,
             "agent_trace": trace
         }
 
@@ -352,6 +413,7 @@ class LangGraphRecommenderAgent:
             "recommendations": [],
             "agent_trace": [],
             "agent_summary": "",
+            "gemini_synthesis": None,
             "execution_time_ms": 0.0
         }
 
@@ -362,6 +424,7 @@ class LangGraphRecommenderAgent:
         # Sanitize recommendations and seed_paper for strict JSON compliance
         clean_recs = [self.recommender._clean_paper_dict(r) for r in final_state.get("recommendations", [])]
         clean_seed = self.recommender._clean_paper_dict(final_state.get("seed_paper"))
+        has_gemini = bool(final_state.get("gemini_synthesis"))
 
         return {
             "query_type": final_state.get("intent"),
@@ -372,8 +435,12 @@ class LangGraphRecommenderAgent:
             "recommendations": clean_recs,
             "agentic_orchestration": {
                 "framework": "LangGraph StateGraph",
+                "llm_engine": f"Google Gemini ({self.gemini_model_name})" if has_gemini else "SciBERT (Transformer)",
+                "gemini_active": has_gemini,
                 "total_execution_ms": total_time_ms,
                 "summary": final_state.get("agent_summary"),
+                "ai_advisor_synthesis": final_state.get("gemini_synthesis"),
                 "workflow_trace": final_state.get("agent_trace")
             }
         }
+
