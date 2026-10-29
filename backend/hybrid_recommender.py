@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import time
 import faiss
@@ -32,17 +33,28 @@ class HybridRecommender:
         self.paper_id_to_faiss_idx = {pid: i for i, pid in enumerate(self.faiss_paper_ids)}
         print(f"Loaded FAISS index with {self.faiss_index.ntotal:,} vectors.")
 
-        # 2. Load metadata
+        # 2. Load metadata and sanitize all NaNs for JSON compliance
         print("Loading paper metadata catalog...")
         papers_df = pd.read_csv(
             PAPERS_METADATA_FILE,
             usecols=["paperId", "title", "abstract", "year", "citationCount"]
         ).drop_duplicates(subset=["paperId"])
-        self.metadata = papers_df.set_index("paperId").to_dict("index")
+        
+        papers_df["paperId"] = papers_df["paperId"].astype(str)
+        papers_df["title"] = papers_df["title"].fillna("Untitled").astype(str)
+        papers_df["abstract"] = papers_df["abstract"].fillna("").astype(str)
+        papers_df.loc[papers_df["abstract"].str.strip().str.lower() == "nan", "abstract"] = ""
+        papers_df["year"] = papers_df["year"].apply(
+            lambda y: int(y) if (pd.notna(y) and str(y).replace(".0", "").isdigit()) else None
+        )
+        papers_df["citationCount"] = papers_df["citationCount"].fillna(0).astype(int)
+        
+        records = papers_df.to_dict("records")
+        self.metadata = {r["paperId"]: r for r in records}
         self.titles_lookup = {
-            str(row["title"]).strip().lower(): pid
-            for pid, row in self.metadata.items()
-            if pd.notna(row["title"])
+            str(r["title"]).strip().lower(): r["paperId"]
+            for r in records
+            if r.get("title") and r["title"] != "Untitled"
         }
         self.max_citations = max([p.get("citationCount", 0) or 0 for p in self.metadata.values()] + [1])
         print(f"Loaded metadata for {len(self.metadata):,} papers.")
@@ -61,6 +73,33 @@ class HybridRecommender:
         self.scibert_model = AutoModel.from_pretrained(MODEL_NAME).to(DEVICE)
         self.scibert_model.eval()
         print(f"Hybrid Recommender initialized successfully in {time.time() - t0:.2f}s!")
+
+    def _clean_paper_dict(self, d: dict) -> dict:
+        """Sanitizes dict to guarantee strict standard JSON serialization (no NaN / Inf / numpy types)."""
+        if not d:
+            return None
+        clean = {}
+        for k, v in d.items():
+            if k == "graph_emb":
+                continue  # skip large numpy embeddings from API responses
+            if isinstance(v, (np.floating, float)):
+                if np.isnan(v) or np.isinf(v):
+                    clean[k] = None
+                else:
+                    clean[k] = float(v)
+            elif isinstance(v, (np.integer, int)):
+                clean[k] = int(v)
+            elif isinstance(v, (np.bool_, bool)):
+                clean[k] = bool(v)
+            elif v is None:
+                clean[k] = None
+            else:
+                s = str(v)
+                if k == "abstract" and s.strip().lower() == "nan":
+                    clean[k] = ""
+                else:
+                    clean[k] = s
+        return clean
 
     def _mean_pooling(self, last_hidden_state, attention_mask):
         mask = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
@@ -85,16 +124,51 @@ class HybridRecommender:
         return vec
 
     def get_paper_by_title_or_id(self, query: str):
-        if query in self.metadata:
-            return query, self.metadata[query]
-        q_clean = query.strip().lower()
-        if q_clean in self.titles_lookup:
-            pid = self.titles_lookup[q_clean]
-            return pid, self.metadata[pid]
-        # Partial match
-        for title, pid in self.titles_lookup.items():
-            if q_clean in title or title in q_clean:
-                return pid, self.metadata[pid]
+        """
+        Locates a seed paper with high precision:
+        1. Exact Paper ID
+        2. Exact lowercased title
+        3. Token overlap ranking (prevents spurious 1-word matches)
+        """
+        if not query or not query.strip():
+            return None, None
+            
+        q_clean = query.strip()
+        q_lower = q_clean.lower()
+        
+        # 1. Exact paper ID
+        if q_clean in self.metadata:
+            return q_clean, self._clean_paper_dict(self.metadata[q_clean])
+            
+        # 2. Exact Title
+        if q_lower in self.titles_lookup:
+            pid = self.titles_lookup[q_lower]
+            return pid, self._clean_paper_dict(self.metadata[pid])
+            
+        # 3. Token-based overlap matching
+        q_tokens = set(re.findall(r"\b[a-z0-9]{3,}\b", q_lower))
+        if len(q_tokens) < 2:
+            return None, None
+            
+        best_overlap = 0
+        best_jaccard = 0.0
+        best_pid = None
+        
+        for title_lower, pid in self.titles_lookup.items():
+            t_tokens = set(re.findall(r"\b[a-z0-9]{3,}\b", title_lower))
+            common = q_tokens & t_tokens
+            if len(common) >= 2:
+                jaccard = len(common) / len(q_tokens | t_tokens)
+                overlap = len(common)
+                if (overlap > best_overlap) or (overlap == best_overlap and jaccard > best_jaccard):
+                    best_overlap = overlap
+                    best_jaccard = jaccard
+                    best_pid = pid
+                    
+        # Require strong agreement (at least 4 matching words OR jaccard >= 0.35 with 2+ words)
+        if best_pid and (best_jaccard >= 0.35 or best_overlap >= 4):
+            return best_pid, self._clean_paper_dict(self.metadata[best_pid])
+            
         return None, None
 
     def recommend(
@@ -167,13 +241,19 @@ class HybridRecommender:
                 "in_graph": in_graph,
                 "graph_emb": g_emb,
                 "title": cand_meta.get("title", "Untitled"),
-                "abstract": cand_meta.get("abstract", ""),
-                "year": int(cand_meta.get("year", 0)) if pd.notna(cand_meta.get("year")) else None,
-                "citationCount": int(cand_meta.get("citationCount", 0)) if pd.notna(cand_meta.get("citationCount")) else 0
+                "abstract": cand_meta.get("abstract", "") or "",
+                "year": cand_meta.get("year"),
+                "citationCount": cand_meta.get("citationCount", 0) or 0
             })
 
         if not candidates:
-            return {"recommendations": [], "seed_paper": target_meta}
+            return {
+                "query_type": "seed_paper" if is_seed_paper_mode else "free_text",
+                "seed_paper": self._clean_paper_dict(target_meta),
+                "alpha": float(alpha),
+                "total_candidates_analyzed": 0,
+                "recommendations": []
+            }
 
         # 3. Handle Graph Query Centroid for Free-Text Query
         if not is_seed_paper_mode:
@@ -198,11 +278,11 @@ class HybridRecommender:
                 fallback_used = True
 
             # Citation impact prior
-            cites = c["citationCount"]
-            citation_prior = np.log1p(cites) / np.log1p(self.max_citations)
+            cites = int(c["citationCount"])
+            citation_prior = float(np.log1p(cites) / np.log1p(self.max_citations))
 
             # Hybrid Score Fusion
-            hybrid_score = (
+            hybrid_score = float(
                 alpha * sem_score +
                 (1.0 - alpha) * graph_score +
                 beta * citation_prior
@@ -240,10 +320,10 @@ class HybridRecommender:
 
         return {
             "query_type": "seed_paper" if is_seed_paper_mode else "free_text",
-            "seed_paper": target_meta,
-            "alpha": alpha,
+            "seed_paper": self._clean_paper_dict(target_meta),
+            "alpha": float(alpha),
             "total_candidates_analyzed": len(candidates),
-            "recommendations": final_recs
+            "recommendations": [self._clean_paper_dict(r) for r in final_recs]
         }
 
     def _generate_explanation(

@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import numpy as np
 import pandas as pd
@@ -66,27 +67,49 @@ def health_check():
 
 @app.get("/api/search")
 def search_papers(q: str = Query(..., min_length=2), limit: int = 8):
-    """Autocomplete / paper selection endpoint"""
+    """Smart autocomplete / paper selection endpoint with token-level relevance ranking."""
     if not recommender:
         raise HTTPException(status_code=503, detail="Recommender not initialized")
     
     q_lower = q.lower().strip()
-    matches = []
+    q_tokens = [w for w in re.findall(r"\b[a-z0-9]{3,}\b", q_lower) if w not in {"the", "and", "for", "with", "that"}]
+    
+    scored_matches = []
     
     for title, pid in recommender.titles_lookup.items():
+        meta = recommender.metadata.get(pid, {})
+        # Exact contiguous substring gets top priority
         if q_lower in title:
-            meta = recommender.metadata[pid]
-            matches.append({
-                "paperId": pid,
-                "title": meta.get("title", "Untitled"),
-                "year": int(meta.get("year", 0)) if pd.notna(meta.get("year")) else None,
-                "citationCount": int(meta.get("citationCount", 0)) if pd.notna(meta.get("citationCount")) else 0,
-                "in_graph": pid in recommender.paper_id_to_node_idx
-            })
-            if len(matches) >= limit:
-                break
+            # Prefer shorter titles that closely match query length
+            score = 100.0 - (len(title) - len(q_lower)) * 0.05
+            scored_matches.append((score, pid, meta))
+        elif q_tokens:
+            # Token overlap score
+            hits = sum(1 for tok in q_tokens if tok in title)
+            if hits >= min(2, len(q_tokens)):
+                score = (hits / len(q_tokens)) * 50.0
+                scored_matches.append((score, pid, meta))
+
+    # Sort descending by relevance score
+    scored_matches.sort(key=lambda x: x[0], reverse=True)
+    
+    results = []
+    seen_ids = set()
+    for _, pid, meta in scored_matches:
+        if pid in seen_ids:
+            continue
+        seen_ids.add(pid)
+        results.append({
+            "paperId": pid,
+            "title": meta.get("title", "Untitled"),
+            "year": meta.get("year"),
+            "citationCount": meta.get("citationCount", 0),
+            "in_graph": pid in recommender.paper_id_to_node_idx
+        })
+        if len(results) >= limit:
+            break
                 
-    return {"query": q, "results": matches}
+    return {"query": q, "results": results}
 
 
 @app.post("/api/recommend")
@@ -96,7 +119,7 @@ def recommend_endpoint(req: RecommendRequest):
     
     try:
         target_pid = req.paper_id
-        # If no explicit paper_id or if user typed text, check if query matches a known title/ID
+        # If no explicit paper_id, check if query matches a known title or ID
         if req.query and not target_pid:
             found_pid, _ = recommender.get_paper_by_title_or_id(req.query)
             if found_pid:
@@ -111,6 +134,8 @@ def recommend_endpoint(req: RecommendRequest):
         )
         return results
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -123,18 +148,13 @@ def get_paper_details(paper_id: str):
     if not meta:
         raise HTTPException(status_code=404, detail="Paper ID not found in catalog")
     
+    clean_meta = recommender._clean_paper_dict(meta)
     in_graph = paper_id in recommender.paper_id_to_node_idx
     node_idx = recommender.paper_id_to_node_idx.get(paper_id)
     
-    return {
-        "paperId": paper_id,
-        "title": meta.get("title"),
-        "abstract": meta.get("abstract"),
-        "year": int(meta.get("year", 0)) if pd.notna(meta.get("year")) else None,
-        "citationCount": int(meta.get("citationCount", 0)) if pd.notna(meta.get("citationCount")) else 0,
-        "in_graph": in_graph,
-        "node_idx": node_idx
-    }
+    clean_meta["in_graph"] = in_graph
+    clean_meta["node_idx"] = node_idx
+    return clean_meta
 
 
 @app.get("/api/evaluation")
