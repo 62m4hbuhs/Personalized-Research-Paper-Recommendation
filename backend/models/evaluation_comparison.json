@@ -1,0 +1,25 @@
+{
+  "num_test_queries": 1000,
+  "candidates_per_query": 100,
+  "alpha": 0.6,
+  "results": {
+    "Semantic-Only (SciBERT)": {
+      "MRR": 0.2334,
+      "Hits@5": 29.4,
+      "Hits@10": 37.1,
+      "Hits@20": 44.8
+    },
+    "Graph-Only (GraphSAGE)": {
+      "MRR": 0.8823,
+      "Hits@5": 95.0,
+      "Hits@10": 96.9,
+      "Hits@20": 98.8
+    },
+    "Hybrid Recommender (alpha=0.60)": {
+      "MRR": 0.4672,
+      "Hits@5": 53.3,
+      "Hits@10": 58.4,
+      "Hits@20": 71.0
+    }
+  }
+}

@@ -1,0 +1,214 @@
+import os
+import json
+import numpy as np
+import pandas as pd
+from typing import Optional, List
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+
+from backend.hybrid_recommender import HybridRecommender
+
+app = FastAPI(
+    title="Personalized Research Paper Recommendation System",
+    description="Dual-Signal Academic Paper Recommendation Engine fusing SciBERT Semantic Similarity and GraphSAGE Citation Topology.",
+    version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Global Recommender Instance (singleton)
+recommender: Optional[HybridRecommender] = None
+
+EVAL_METRICS_PATH = "backend/models/evaluation_comparison.json"
+GRAPHSAGE_METRICS_PATH = "backend/models/graphsage_metrics.json"
+EDGES_FILE = "data/processed/graph/edges_index.csv"
+
+# Pre-load edge list for fast subgraph queries
+edges_df = None
+
+
+@app.on_event("startup")
+def startup_event():
+    global recommender, edges_df
+    print("FastAPI server starting up...")
+    recommender = HybridRecommender()
+    if os.path.exists(EDGES_FILE):
+        edges_df = pd.read_csv(EDGES_FILE)
+        print(f"Loaded edge list for subgraph queries ({len(edges_df):,} edges).")
+
+
+class RecommendRequest(BaseModel):
+    query: Optional[str] = None
+    paper_id: Optional[str] = None
+    top_k: int = 10
+    alpha: float = 0.60
+    candidate_pool_size: int = 60
+
+
+@app.get("/api/health")
+def health_check():
+    return {
+        "status": "healthy",
+        "faiss_total_vectors": recommender.faiss_index.ntotal if recommender else 0,
+        "graph_nodes": recommender.graph_embeddings.shape[0] if recommender else 0,
+        "metadata_count": len(recommender.metadata) if recommender else 0
+    }
+
+
+@app.get("/api/search")
+def search_papers(q: str = Query(..., min_length=2), limit: int = 8):
+    """Autocomplete / paper selection endpoint"""
+    if not recommender:
+        raise HTTPException(status_code=503, detail="Recommender not initialized")
+    
+    q_lower = q.lower().strip()
+    matches = []
+    
+    for title, pid in recommender.titles_lookup.items():
+        if q_lower in title:
+            meta = recommender.metadata[pid]
+            matches.append({
+                "paperId": pid,
+                "title": meta.get("title", "Untitled"),
+                "year": int(meta.get("year", 0)) if pd.notna(meta.get("year")) else None,
+                "citationCount": int(meta.get("citationCount", 0)) if pd.notna(meta.get("citationCount")) else 0,
+                "in_graph": pid in recommender.paper_id_to_node_idx
+            })
+            if len(matches) >= limit:
+                break
+                
+    return {"query": q, "results": matches}
+
+
+@app.post("/api/recommend")
+def recommend_endpoint(req: RecommendRequest):
+    if not recommender:
+        raise HTTPException(status_code=503, detail="Recommender not initialized")
+    
+    try:
+        target_pid = req.paper_id
+        # If no explicit paper_id or if user typed text, check if query matches a known title/ID
+        if req.query and not target_pid:
+            found_pid, _ = recommender.get_paper_by_title_or_id(req.query)
+            if found_pid:
+                target_pid = found_pid
+
+        results = recommender.recommend(
+            query=req.query,
+            seed_paper_id=target_pid,
+            top_k=req.top_k,
+            alpha=req.alpha,
+            candidate_pool_size=req.candidate_pool_size
+        )
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/paper/{paper_id}")
+def get_paper_details(paper_id: str):
+    if not recommender:
+        raise HTTPException(status_code=503, detail="Recommender not initialized")
+    
+    meta = recommender.metadata.get(paper_id)
+    if not meta:
+        raise HTTPException(status_code=404, detail="Paper ID not found in catalog")
+    
+    in_graph = paper_id in recommender.paper_id_to_node_idx
+    node_idx = recommender.paper_id_to_node_idx.get(paper_id)
+    
+    return {
+        "paperId": paper_id,
+        "title": meta.get("title"),
+        "abstract": meta.get("abstract"),
+        "year": int(meta.get("year", 0)) if pd.notna(meta.get("year")) else None,
+        "citationCount": int(meta.get("citationCount", 0)) if pd.notna(meta.get("citationCount")) else 0,
+        "in_graph": in_graph,
+        "node_idx": node_idx
+    }
+
+
+@app.get("/api/evaluation")
+def get_evaluation_metrics():
+    """Returns held-out test evaluation benchmarks"""
+    eval_data = {}
+    graphsage_data = {}
+    
+    if os.path.exists(EVAL_METRICS_PATH):
+        with open(EVAL_METRICS_PATH, "r") as f:
+            eval_data = json.load(f)
+            
+    if os.path.exists(GRAPHSAGE_METRICS_PATH):
+        with open(GRAPHSAGE_METRICS_PATH, "r") as f:
+            graphsage_data = json.load(f)
+            
+    return {
+        "ranking_benchmark": eval_data,
+        "graphsage_link_prediction": graphsage_data
+    }
+
+
+@app.get("/api/graph/subgraph/{paper_id}")
+def get_citation_subgraph(paper_id: str, max_neighbors: int = 15):
+    """Returns 1-hop ego network for citation visualization"""
+    if not recommender or edges_df is None:
+        raise HTTPException(status_code=503, detail="Graph or recommender not available")
+        
+    if paper_id not in recommender.paper_id_to_node_idx:
+        return {"nodes": [], "links": [], "center_id": paper_id}
+        
+    center_node_idx = recommender.paper_id_to_node_idx[paper_id]
+    
+    # Direct neighbors
+    sub = edges_df[edges_df["source_id"] == center_node_idx].head(max_neighbors)
+    neighbor_node_ids = set(sub["target_id"].tolist())
+    
+    nodes = [{
+        "id": paper_id,
+        "label": recommender.metadata.get(paper_id, {}).get("title", "Seed Paper")[:45] + "...",
+        "group": "seed",
+        "citationCount": recommender.metadata.get(paper_id, {}).get("citationCount", 0)
+    }]
+    
+    links = []
+    
+    for n_idx in neighbor_node_ids:
+        n_pid = recommender.node_idx_to_paper_id.get(n_idx)
+        if not n_pid:
+            continue
+        n_meta = recommender.metadata.get(n_pid, {})
+        nodes.append({
+            "id": n_pid,
+            "label": n_meta.get("title", "Paper")[:40] + "...",
+            "group": "citation",
+            "citationCount": n_meta.get("citationCount", 0)
+        })
+        links.append({
+            "source": paper_id,
+            "target": n_pid
+        })
+        
+    return {"nodes": nodes, "links": links, "center_id": paper_id}
+
+
+# Mount static files directory for frontend
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+@app.get("/")
+def serve_frontend():
+    index_file = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    return {"message": "FastAPI Recommendation API is running. Navigate to /docs for Swagger UI."}
+

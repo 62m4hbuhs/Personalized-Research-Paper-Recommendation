@@ -1,0 +1,9 @@
+.env
+myenv/
+__pycache__/
+*.pyc
+
+# Ignore large datasets and vector indices (GitHub 100MB limit)
+data/
+*.npy
+*.index

@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScholarGraph • Hybrid Research Paper Recommendation System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+    body { font-family: 'Inter', sans-serif; background-color: #0b0f19; color: #f1f5f9; }
+    .code-font { font-family: 'JetBrains Mono', monospace; }
+    .glass-card { background: rgba(17, 24, 39, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .glass-card-hover:hover { border-color: rgba(99, 102, 241, 0.4); transform: translateY(-2px); transition: all 0.2s ease; }
+    .gradient-text { background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #38bdf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top Navigation -->
+  <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <i class="fa-solid fa-diagram-project text-white text-lg"></i>
+        </div>
+        <div>
+          <span class="text-xl font-bold tracking-tight gradient-text">ScholarGraph</span>
+          <span class="text-xs text-slate-400 block -mt-1 font-medium">Semantic + Citation Network Recommender</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800">
+        <button id="tab-recs" onclick="switchTab('recs')" class="px-4 py-1.5 text-sm font-medium rounded-lg bg-indigo-600 text-white shadow-sm flex items-center gap-2 transition">
+          <i class="fa-solid fa-compass"></i> Recommendations
+        </button>
+        <button id="tab-graph" onclick="switchTab('graph')" class="px-4 py-1.5 text-sm font-medium rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-2 transition">
+          <i class="fa-solid fa-circle-nodes"></i> Graph View
+        </button>
+        <button id="tab-eval" onclick="switchTab('eval')" class="px-4 py-1.5 text-sm font-medium rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-2 transition">
+          <i class="fa-solid fa-chart-line"></i> Benchmark & Metrics
+        </button>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          GraphSAGE + SciBERT Active
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-6 py-8 flex-1 w-full">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: RECOMMENDATIONS EXPLORER           -->
+    <!-- ========================================== -->
+    <div id="view-recs" class="space-y-8">
+      
+      <!-- Query / Seed Paper Panel -->
+      <section class="glass-card rounded-2xl p-6 shadow-xl relative overflow-hidden">
+        <div class="absolute -right-20 -top-20 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center mb-6">
+          <div>
+            <h2 class="text-2xl font-bold text-white tracking-tight">Discover Research Papers</h2>
+            <p class="text-slate-400 text-sm mt-1">Dual-signal search combining deep transformer semantics (SciBERT) and topological citation connectivity (GraphSAGE).</p>
+          </div>
+
+          <!-- Mode Selector -->
+          <div class="flex bg-slate-900 border border-slate-800 rounded-xl p-1">
+            <button id="btn-mode-seed" onclick="setSearchMode('seed')" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition">
+              <i class="fa-solid fa-book-bookmark mr-1"></i> Seed Paper Mode
+            </button>
+            <button id="btn-mode-query" onclick="setSearchMode('query')" class="px-4 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">
+              <i class="fa-solid fa-magnifying-glass mr-1"></i> Free Topic Query
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Input Bar -->
+        <div class="relative">
+          <div class="relative flex items-center">
+            <i class="fa-solid fa-search absolute left-4 text-slate-400 text-lg"></i>
+            <input 
+              type="text" 
+              id="search-input"
+              oninput="handleSearchInput(this.value)"
+              onkeydown="if(event.key==='Enter') executeSearch()"
+              placeholder="Search by paper title or enter topic keywords..."
+              class="w-full pl-12 pr-36 py-4 bg-slate-900/90 border border-slate-700/80 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-base transition"
+              value="How Powerful are Graph Neural Networks?"
+            />
+            <button 
+              id="btn-recommend"
+              onclick="executeSearch()"
+              class="absolute right-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-lg text-sm transition shadow-md shadow-indigo-600/30 flex items-center gap-2">
+              <span>Recommend</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+
+          <!-- Autocomplete Dropdown -->
+          <div id="autocomplete-dropdown" class="hidden absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-40 max-h-72 overflow-y-auto"></div>
+        </div>
+
+        <!-- Preset Seeds -->
+        <div class="flex items-center gap-2 mt-4 text-xs text-slate-400 flex-wrap">
+          <span class="text-slate-500 font-medium">Popular Seeds:</span>
+          <button onclick="setQueryPreset('How Powerful are Graph Neural Networks?')" class="px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition">How Powerful are GNNs?</button>
+          <button onclick="setQueryPreset('Inductive Representation Learning on Large Graphs')" class="px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition">GraphSAGE</button>
+          <button onclick="setQueryPreset('Semi-Supervised Classification with Graph Convolutional Networks')" class="px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition">GCN (Kipf & Welling)</button>
+          <button onclick="setQueryPreset('inductive representation learning on large dynamic graphs')" class="px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition">Dynamic Graphs Query</button>
+        </div>
+
+        <!-- Dynamic Signal Fusion Slider -->
+        <div class="mt-6 pt-6 border-t border-slate-800/80">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-2">
+            <div>
+              <span class="text-sm font-semibold text-white flex items-center gap-2">
+                <i class="fa-solid fa-sliders text-indigo-400"></i> Signal Fusion Weight (&alpha; = <span id="alpha-val" class="text-indigo-400 font-bold">0.60</span>)
+              </span>
+              <span class="text-xs text-slate-400">Controls the relative balance between SciBERT textual content and GraphSAGE citation topology.</span>
+            </div>
+            <div class="flex items-center gap-4 text-xs font-semibold">
+              <span class="text-purple-400 flex items-center gap-1"><i class="fa-solid fa-circle text-[8px]"></i> Citation Topology (<span id="graph-weight-val">40%</span>)</span>
+              <span class="text-indigo-400 flex items-center gap-1"><i class="fa-solid fa-circle text-[8px]"></i> Content Semantics (<span id="sem-weight-val">60%</span>)</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-4">
+            <span class="text-xs text-purple-400 font-medium">Citation Graph Only</span>
+            <input 
+              type="range" 
+              id="alpha-slider" 
+              min="0" 
+              max="1" 
+              step="0.05" 
+              value="0.60" 
+              oninput="updateAlpha(this.value)"
+              class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+            />
+            <span class="text-xs text-indigo-400 font-medium">Semantics Only</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Active Seed Paper Card (if applicable) -->
+      <section id="seed-paper-banner" class="hidden glass-card rounded-xl p-5 border-l-4 border-indigo-500 bg-indigo-950/20">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">Selected Seed Paper</span>
+            <h3 id="seed-title" class="text-lg font-bold text-white mt-1"></h3>
+            <p id="seed-meta" class="text-xs text-slate-400 mt-1"></p>
+            <p id="seed-abstract" class="text-xs text-slate-300 mt-2 line-clamp-2 leading-relaxed"></p>
+          </div>
+          <div class="text-right whitespace-nowrap">
+            <span id="seed-citations" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-200"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Results Grid -->
+      <section class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <span>Ranked Recommendations</span>
+            <span id="results-count" class="text-xs font-normal text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">0 papers</span>
+          </h3>
+          <div class="flex items-center gap-2 text-xs text-slate-400">
+            <i class="fa-solid fa-circle-info text-indigo-400"></i>
+            <span>Sorted by hybrid score: &alpha; &middot; S<sub>semantic</sub> + (1-&alpha;) &middot; S<sub>graph</sub> + &beta; &middot; Prior</span>
+          </div>
+        </div>
+
+        <div id="loading-spinner" class="hidden py-16 text-center">
+          <i class="fa-solid fa-circle-notch fa-spin text-4xl text-indigo-500 mb-3"></i>
+          <p class="text-slate-300 text-sm font-medium">Computing SciBERT semantic vectors & GraphSAGE citation topology...</p>
+        </div>
+
+        <div id="results-container" class="space-y-4">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: CITATION GRAPH EXPLORER            -->
+    <!-- ========================================== -->
+    <div id="view-graph" class="hidden space-y-6">
+      <div class="glass-card rounded-2xl p-6">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h2 class="text-xl font-bold text-white">Citation Ego-Network Visualization</h2>
+            <p class="text-xs text-slate-400 mt-1">Visualizing 1-hop citations connecting the active seed paper to neighborhood nodes in the 92,081-node graph.</p>
+          </div>
+          <div class="flex items-center gap-4 text-xs font-medium">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-indigo-500 inline-block"></span> Seed Paper</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-purple-500 inline-block"></span> Cited Neighbor</span>
+          </div>
+        </div>
+        <div id="graph-canvas-container" class="w-full h-[550px] bg-slate-950/80 rounded-xl border border-slate-800 relative overflow-hidden flex items-center justify-center">
+          <svg id="citation-graph-svg" class="w-full h-full"></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: BENCHMARK & EVALUATION DASHBOARD   -->
+    <!-- ========================================== -->
+    <div id="view-eval" class="hidden space-y-8">
+      
+      <!-- Overview Banner -->
+      <div class="glass-card rounded-2xl p-6 border-l-4 border-emerald-500">
+        <div class="flex justify-between items-start">
+          <div>
+            <h2 class="text-2xl font-bold text-white">Leakage-Safe Held-Out Evaluation Protocol</h2>
+            <p class="text-slate-400 text-sm mt-1 max-w-3xl leading-relaxed">
+              To rigorously validate that combining semantic and citation signals outperforms single-signal retrieval, 
+              the 103,482 citation edges were partitioned into 85% train, 5% validation, and 10% test. 
+              Held-out test edges were completely removed from the message-passing adjacency graph during GraphSAGE evaluation.
+            </p>
+          </div>
+          <button onclick="fetchEvaluation()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg text-white transition flex items-center gap-2">
+            <i class="fa-solid fa-arrows-rotate"></i> Refresh Benchmark
+          </button>
+        </div>
+      </div>
+
+      <!-- Key Stat Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="glass-card rounded-xl p-5 border-t-2 border-indigo-500">
+          <span class="text-xs text-slate-400 uppercase font-semibold">GraphSAGE Test ROC-AUC</span>
+          <div class="text-3xl font-extrabold text-white mt-2">73.79%</div>
+          <span class="text-xs text-emerald-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-check"></i> Link Prediction on Held-Out Edges</span>
+        </div>
+        <div class="glass-card rounded-xl p-5 border-t-2 border-purple-500">
+          <span class="text-xs text-slate-400 uppercase font-semibold">Hybrid Ranking MRR</span>
+          <div class="text-3xl font-extrabold text-white mt-2">0.4672</div>
+          <span class="text-xs text-indigo-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-arrow-trend-up"></i> +100.2% over Semantic-Only</span>
+        </div>
+        <div class="glass-card rounded-xl p-5 border-t-2 border-emerald-500">
+          <span class="text-xs text-slate-400 uppercase font-semibold">Hybrid Hits@5</span>
+          <div class="text-3xl font-extrabold text-white mt-2">53.30%</div>
+          <span class="text-xs text-emerald-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-arrow-trend-up"></i> vs 29.40% Semantic</span>
+        </div>
+        <div class="glass-card rounded-xl p-5 border-t-2 border-sky-500">
+          <span class="text-xs text-slate-400 uppercase font-semibold">Hybrid Hits@20</span>
+          <div class="text-3xl font-extrabold text-white mt-2">71.00%</div>
+          <span class="text-xs text-sky-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-check-double"></i> 1-in-100 Candidate Ranking</span>
+        </div>
+      </div>
+
+      <!-- Comparison Table & Chart Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Table -->
+        <div class="glass-card rounded-xl p-6">
+          <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-table text-indigo-400"></i> Comparative Ranking Benchmark
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="text-xs text-slate-400 uppercase bg-slate-900/80 border-b border-slate-800">
+                <tr>
+                  <th class="px-4 py-3">Method / Signal</th>
+                  <th class="px-4 py-3 text-right">MRR</th>
+                  <th class="px-4 py-3 text-right">Hits@5</th>
+                  <th class="px-4 py-3 text-right">Hits@10</th>
+                  <th class="px-4 py-3 text-right">Hits@20</th>
+                </tr>
+              </thead>
+              <tbody id="eval-table-body" class="divide-y divide-slate-800/60">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Bar Chart -->
+        <div class="glass-card rounded-xl p-6">
+          <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-chart-column text-purple-400"></i> Hits@K Performance Comparison
+          </h3>
+          <div class="h-64">
+            <canvas id="evalChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-slate-800/80 bg-slate-950/60 py-6 text-center text-xs text-slate-500">
+    Personalized Research Paper Recommendation System • SciBERT + FAISS + GraphSAGE Hybrid Architecture
+  </footer>
+
+  <script>
+    let currentMode = 'seed';
+    let currentAlpha = 0.60;
+    let selectedSeedId = '62ed9bf1d83c8db1f9cbf92ea2f57ea90ef683d9';
+    let selectedSeedTitle = 'How Powerful are Graph Neural Networks?';
+    let currentRecommendations = [];
+    let evalChart = null;
+
+    // Tab Switching
+    function switchTab(tabId) {
+      ['recs', 'graph', 'eval'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.add('hidden');
+        document.getElementById(`tab-${t}`).className = 'px-4 py-1.5 text-sm font-medium rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-2 transition';
+      });
+      document.getElementById(`view-${tabId}`).classList.remove('hidden');
+      document.getElementById(`tab-${tabId}`).className = 'px-4 py-1.5 text-sm font-medium rounded-lg bg-indigo-600 text-white shadow-sm flex items-center gap-2 transition';
+
+      if (tabId === 'eval') {
+        fetchEvaluation();
+      } else if (tabId === 'graph') {
+        if (selectedSeedId) fetchSubgraph(selectedSeedId);
+      }
+    }
+
+    function setSearchMode(mode) {
+      currentMode = mode;
+      const btnSeed = document.getElementById('btn-mode-seed');
+      const btnQuery = document.getElementById('btn-mode-query');
+      if (mode === 'seed') {
+        btnSeed.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition';
+        btnQuery.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition';
+        document.getElementById('search-input').placeholder = "Enter paper title to select seed paper...";
+      } else {
+        btnQuery.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition';
+        btnSeed.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition';
+        document.getElementById('search-input').placeholder = "Enter your research topic or query...";
+        selectedSeedId = null;
+        selectedSeedTitle = '';
+        document.getElementById('seed-paper-banner').classList.add('hidden');
+      }
+    }
+
+    function setQueryPreset(title) {
+      document.getElementById('search-input').value = title;
+      selectedSeedTitle = title;
+      selectedSeedId = null;
+      executeSearch();
+    }
+
+    function updateAlpha(val) {
+      currentAlpha = parseFloat(val);
+      document.getElementById('alpha-val').innerText = currentAlpha.toFixed(2);
+      document.getElementById('sem-weight-val').innerText = `${Math.round(currentAlpha * 100)}%`;
+      document.getElementById('graph-weight-val').innerText = `${Math.round((1 - currentAlpha) * 100)}%`;
+      executeSearch();
+    }
+
+    // Autocomplete
+    let searchDebounce = null;
+    function handleSearchInput(val) {
+      if (val !== selectedSeedTitle) {
+        selectedSeedId = null;
+      }
+      clearTimeout(searchDebounce);
+      if (val.trim().length < 2) {
+        document.getElementById('autocomplete-dropdown').classList.add('hidden');
+        return;
+      }
+      searchDebounce = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/search?q=${encodeURIComponent(val)}&limit=6`);
+          const data = await res.json();
+          renderAutocomplete(data.results || []);
+        } catch (e) {
+          console.error(e);
+        }
+      }, 200);
+    }
+
+    function renderAutocomplete(papers) {
+      const drop = document.getElementById('autocomplete-dropdown');
+      if (!papers.length) {
+        drop.classList.add('hidden');
+        return;
+      }
+      drop.innerHTML = papers.map(p => `
+        <div onclick="selectAutocomplete('${p.paperId}', '${escapeHtml(p.title)}')" class="px-4 py-3 hover:bg-slate-800 cursor-pointer border-b border-slate-800/60 last:border-0">
+          <div class="text-sm font-semibold text-white">${p.title}</div>
+          <div class="text-xs text-slate-400 flex items-center gap-3 mt-1">
+            <span>Year: ${p.year || 'N/A'}</span>
+            <span>Citations: ${p.citationCount.toLocaleString()}</span>
+            ${p.in_graph ? '<span class="text-emerald-400 font-medium">In Citation Graph</span>' : '<span class="text-amber-400 font-medium">Content Only</span>'}
+          </div>
+        </div>
+      `).join('');
+      drop.classList.remove('hidden');
+    }
+
+    function selectAutocomplete(paperId, title) {
+      selectedSeedId = paperId;
+      selectedSeedTitle = title;
+      document.getElementById('search-input').value = title;
+      document.getElementById('autocomplete-dropdown').classList.add('hidden');
+      setSearchMode('seed');
+      executeSearch();
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    // Main Recommendation Call
+    async function executeSearch() {
+      const queryText = document.getElementById('search-input').value.trim();
+      const container = document.getElementById('results-container');
+      const spinner = document.getElementById('loading-spinner');
+      const btn = document.getElementById('btn-recommend');
+
+      container.innerHTML = '';
+      spinner.classList.remove('hidden');
+      btn.disabled = true;
+
+      const payload = {
+        top_k: 10,
+        alpha: currentAlpha,
+        candidate_pool_size: 60,
+        query: queryText,
+        paper_id: (selectedSeedId && queryText === selectedSeedTitle) ? selectedSeedId : null
+      };
+
+      try {
+        const res = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          throw new Error(`Server returned status ${res.status}`);
+        }
+
+        const data = await res.json();
+        spinner.classList.add('hidden');
+        btn.disabled = false;
+
+        if (data.seed_paper) {
+          showSeedBanner(data.seed_paper);
+          selectedSeedId = data.seed_paper.paperId || selectedSeedId;
+          selectedSeedTitle = data.seed_paper.title || selectedSeedTitle;
+        } else {
+          document.getElementById('seed-paper-banner').classList.add('hidden');
+        }
+
+        renderRecommendations(data.recommendations || []);
+      } catch (err) {
+        spinner.classList.add('hidden');
+        btn.disabled = false;
+        container.innerHTML = `
+          <div class="p-6 text-center text-amber-300 bg-amber-950/30 rounded-xl border border-amber-800/50 space-y-2">
+            <div class="font-bold text-base flex items-center justify-center gap-2">
+              <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Backend Server Connection Error
+            </div>
+            <p class="text-xs text-slate-300">
+              The FastAPI backend process is currently offline or unreachable.
+            </p>
+            <div class="text-xs text-slate-400">Please verify the server is running in PowerShell:</div>
+            <div class="code-font bg-slate-900 px-3 py-1.5 rounded text-indigo-300 inline-block text-xs border border-slate-800">
+              .\\myenv\\Scripts\\python.exe -m uvicorn backend.app:app --port 8000 --reload
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function showSeedBanner(meta) {
+      const banner = document.getElementById('seed-paper-banner');
+      document.getElementById('seed-title').innerText = meta.title || "Untitled";
+      document.getElementById('seed-meta').innerText = `Year: ${meta.year || 'N/A'} • ID: ${meta.paperId || ''}`;
+      document.getElementById('seed-abstract').innerText = meta.abstract || "No abstract available.";
+      document.getElementById('seed-citations').innerHTML = `<i class="fa-solid fa-quote-right text-indigo-400"></i> ${Number(meta.citationCount || 0).toLocaleString()} citations`;
+      banner.classList.remove('hidden');
+    }
+
+    function renderRecommendations(recs) {
+      currentRecommendations = recs;
+      const container = document.getElementById('results-container');
+      document.getElementById('results-count').innerText = `${recs.length} papers`;
+
+      if (!recs.length) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-400">No matching papers found. Try adjusting query or alpha slider.</div>`;
+        return;
+      }
+
+      container.innerHTML = recs.map(r => {
+        const hybridPct = Math.round(r.hybrid_score * 100);
+        const semPct = Math.round(r.semantic_score * 100);
+        const graphPct = Math.round(r.graph_score * 100);
+
+        return `
+          <div class="glass-card glass-card-hover rounded-xl p-5 border border-slate-800">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex items-start gap-3">
+                <span class="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 font-bold text-sm flex items-center justify-center shrink-0 border border-indigo-500/20">
+                  #${r.rank}
+                </span>
+                <div>
+                  <h4 class="text-base font-bold text-white hover:text-indigo-400 cursor-pointer transition" onclick="selectAutocomplete('${r.paperId}', '${escapeHtml(r.title)}')">
+                    ${r.title}
+                  </h4>
+                  <div class="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                    <span><i class="fa-regular fa-calendar mr-1"></i>${r.year || 'N/A'}</span>
+                    <span><i class="fa-solid fa-quote-right mr-1 text-slate-500"></i>${r.citationCount.toLocaleString()} citations</span>
+                    ${r.fallback_applied ? '<span class="text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">Content Fallback</span>' : '<span class="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Citation Topology Match</span>'}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Overall Hybrid Score Badge -->
+              <div class="text-right shrink-0">
+                <div class="text-2xl font-black text-indigo-400">${hybridPct}%</div>
+                <div class="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">Hybrid Match</div>
+              </div>
+            </div>
+
+            <!-- Abstract Drawer -->
+            <p class="text-xs text-slate-300 mt-3 leading-relaxed line-clamp-2">
+              ${r.abstract || 'No abstract text available in catalog.'}
+            </p>
+
+            <!-- Score Progress Bars & Explanation -->
+            <div class="mt-4 pt-3 border-t border-slate-800/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <!-- Score Bars -->
+              <div class="flex items-center gap-6 w-full md:w-auto text-xs">
+                <div>
+                  <div class="flex justify-between text-[11px] mb-1">
+                    <span class="text-indigo-400 font-medium">Semantic Sim:</span>
+                    <span class="font-bold text-slate-200 ml-2">${semPct}%</span>
+                  </div>
+                  <div class="w-28 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-indigo-500 rounded-full" style="width: ${semPct}%"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex justify-between text-[11px] mb-1">
+                    <span class="text-purple-400 font-medium">Graph Affinity:</span>
+                    <span class="font-bold text-slate-200 ml-2">${graphPct}%</span>
+                  </div>
+                  <div class="w-28 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-purple-500 rounded-full" style="width: ${graphPct}%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Reason Pill -->
+              <div class="text-xs text-slate-300 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-lightbulb text-amber-400"></i>
+                <span>${r.explanation}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Subgraph Force Network Visualization
+    async function fetchSubgraph(paperId) {
+      try {
+        const res = await fetch(`/api/graph/subgraph/${paperId}`);
+        const data = await res.json();
+        renderD3Graph(data);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderD3Graph(graphData) {
+      const svg = d3.select("#citation-graph-svg");
+      svg.selectAll("*").remove();
+
+      const container = document.getElementById("graph-canvas-container");
+      const width = container.clientWidth || 800;
+      const height = container.clientHeight || 550;
+
+      if (!graphData.nodes || !graphData.nodes.length) {
+        svg.append("text")
+          .attr("x", width / 2)
+          .attr("y", height / 2)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#64748b")
+          .text("No citation graph connections found for this paper.");
+        return;
+      }
+
+      const simulation = d3.forceSimulation(graphData.nodes)
+        .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(120))
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+      const link = svg.append("g")
+        .selectAll("line")
+        .data(graphData.links)
+        .join("line")
+        .attr("stroke", "rgba(99, 102, 241, 0.3)")
+        .attr("stroke-width", 2);
+
+      const node = svg.append("g")
+        .selectAll("g")
+        .data(graphData.nodes)
+        .join("g")
+        .call(d3.drag()
+          .on("start", (event, d) => { if (!event.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+          .on("drag", (event, d) => { d.fx = event.x; d.fy = event.y; })
+          .on("end", (event, d) => { if (!event.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
+        );
+
+      node.append("circle")
+        .attr("r", d => d.group === 'seed' ? 14 : 9)
+        .attr("fill", d => d.group === 'seed' ? '#6366f1' : '#a855f7')
+        .attr("stroke", "#ffffff")
+        .attr("stroke-width", 2);
+
+      node.append("text")
+        .text(d => d.label)
+        .attr("x", 16)
+        .attr("y", 4)
+        .attr("fill", "#e2e8f0")
+        .attr("font-size", "11px")
+        .attr("font-family", "Inter, sans-serif");
+
+      simulation.on("tick", () => {
+        link
+          .attr("x1", d => d.source.x)
+          .attr("y1", d => d.source.y)
+          .attr("x2", d => d.target.x)
+          .attr("y2", d => d.target.y);
+
+        node
+          .attr("transform", d => `translate(${d.x},${d.y})`);
+      });
+    }
+
+    // Evaluation Dashboard
+    async function fetchEvaluation() {
+      try {
+        const res = await fetch('/api/evaluation');
+        const data = await res.json();
+        const ranking = data.ranking_benchmark?.results || {};
+        
+        const tbody = document.getElementById('eval-table-body');
+        tbody.innerHTML = Object.entries(ranking).map(([method, metrics]) => `
+          <tr class="hover:bg-slate-900/50">
+            <td class="px-4 py-3 font-semibold text-white">${method}</td>
+            <td class="px-4 py-3 text-right font-mono text-indigo-400 font-bold">${metrics.MRR.toFixed(4)}</td>
+            <td class="px-4 py-3 text-right font-mono text-slate-300">${metrics["Hits@5"]}%</td>
+            <td class="px-4 py-3 text-right font-mono text-slate-300">${metrics["Hits@10"]}%</td>
+            <td class="px-4 py-3 text-right font-mono text-slate-300">${metrics["Hits@20"]}%</td>
+          </tr>
+        `).join('');
+
+        renderEvalChart(ranking);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderEvalChart(ranking) {
+      const ctx = document.getElementById('evalChart').getContext('2d');
+      if (evalChart) evalChart.destroy();
+
+      const labels = ['Hits@5', 'Hits@10', 'Hits@20'];
+      const methods = Object.keys(ranking);
+
+      const datasets = methods.map((m, idx) => {
+        const colors = [
+          'rgba(99, 102, 241, 0.8)',
+          'rgba(168, 85, 247, 0.8)',
+          'rgba(16, 185, 129, 0.8)'
+        ];
+        return {
+          label: m,
+          data: [ranking[m]["Hits@5"], ranking[m]["Hits@10"], ranking[m]["Hits@20"]],
+          backgroundColor: colors[idx % colors.length],
+          borderRadius: 6
+        };
+      });
+
+      evalChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#94a3b8', font: { size: 11 } } }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: { color: '#64748b', callback: val => val + '%' },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            },
+            x: {
+              ticks: { color: '#94a3b8' },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    // Auto-execute default search on load
+    window.addEventListener('DOMContentLoaded', () => {
+      executeSearch();
+    });
+  </script>
+</body>
+</html>
