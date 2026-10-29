@@ -6,6 +6,7 @@ Welcome to the central Obsidian Vault for the **Personalized Research Paper Reco
 - **Project Goal**: Enable researchers and students to discover relevant, high-impact scientific literature by fusing textual/semantic content with topological citation-graph signals.
 - **Core Paradigm**: Dual-signal hybrid ranking (`SciBERT + FAISS` for content semantic similarity, `GraphSAGE` for topological citation affinity, unified by dynamic score fusion and LLM explainability).
 - **Current Development Environment**: PyTorch Geometric with GPU acceleration (NVIDIA RTX 2050 CUDA), FastAPI backend, React modern frontend.
+- **Master Documentation**: Read the complete [[Project Report & Architecture]].
 
 ---
 
