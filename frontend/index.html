@@ -673,7 +673,12 @@
         });
 
         if (!res.ok) {
-          throw new Error(`Server returned status ${res.status}`);
+          let errorMsg = `Server returned status ${res.status}`;
+          try {
+            const errJson = await res.json();
+            if (errJson && errJson.detail) errorMsg = errJson.detail;
+          } catch (_) {}
+          throw new Error(errorMsg);
         }
 
         const data = await res.json();
@@ -695,12 +700,12 @@
         container.innerHTML = `
           <div class="p-6 text-center text-amber-300 bg-amber-950/30 rounded-xl border border-amber-800/50 space-y-2">
             <div class="font-bold text-base flex items-center justify-center gap-2">
-              <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Backend Server Connection Error
+              <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Request Notice
             </div>
             <p class="text-xs text-slate-300">
-              The FastAPI backend process is currently offline or unreachable.
+              ${escapeHtml(err.message || 'Unable to communicate with the recommendation engine.')}
             </p>
-            <div class="text-xs text-slate-400">Please verify the server is running in PowerShell:</div>
+            <div class="text-xs text-slate-400">If the server was restarted, refresh your browser or ensure the server is active:</div>
             <div class="code-font bg-slate-900 px-3 py-1.5 rounded text-indigo-300 inline-block text-xs border border-slate-800">
               .\\myenv\\Scripts\\python.exe -m uvicorn backend.app:app --port 8000 --reload
             </div>
