@@ -280,3 +280,4 @@ ScholarGraph validates the core hypothesis outlined in the project guide: **comb
 ### Future Work
 - **Temporal GNNs**: Integrating publication year decay functions to explicitly balance foundational historical works with newly published breakthrough preprints.
 - **Generative LLM Synthesis**: Orchestrating local LLMs (e.g., Llama 3 / Mistral) via LangGraph to synthesize multi-paper comparative literature reviews directly from the top recommendations.
+
