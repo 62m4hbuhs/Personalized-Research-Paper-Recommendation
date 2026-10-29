@@ -11,11 +11,12 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from backend.hybrid_recommender import HybridRecommender
+from backend.agentic_workflow import LangGraphRecommenderAgent
 
 app = FastAPI(
     title="Personalized Research Paper Recommendation System",
-    description="Dual-Signal Academic Paper Recommendation Engine fusing SciBERT Semantic Similarity and GraphSAGE Citation Topology.",
-    version="1.0.0"
+    description="Dual-Signal Academic Paper Recommendation Engine fusing SciBERT Semantic Similarity and GraphSAGE Citation Topology with LangGraph Agentic Orchestration.",
+    version="2.0.0"
 )
 
 app.add_middleware(
@@ -26,8 +27,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global Recommender Instance (singleton)
+# Global Recommender Instances (singletons)
 recommender: Optional[HybridRecommender] = None
+agent_recommender: Optional[LangGraphRecommenderAgent] = None
 
 EVAL_METRICS_PATH = "backend/models/evaluation_comparison.json"
 GRAPHSAGE_METRICS_PATH = "backend/models/graphsage_metrics.json"
@@ -39,9 +41,11 @@ edges_df = None
 
 @app.on_event("startup")
 def startup_event():
-    global recommender, edges_df
+    global recommender, agent_recommender, edges_df
     print("FastAPI server starting up...")
     recommender = HybridRecommender()
+    agent_recommender = LangGraphRecommenderAgent(recommender)
+    print("LangGraph Agentic Orchestrator initialized successfully!")
     if os.path.exists(EDGES_FILE):
         edges_df = pd.read_csv(EDGES_FILE)
         print(f"Loaded edge list for subgraph queries ({len(edges_df):,} edges).")
@@ -50,6 +54,15 @@ def startup_event():
 class RecommendRequest(BaseModel):
     query: Optional[str] = None
     paper_id: Optional[str] = None
+    reading_list_ids: Optional[List[str]] = None
+    top_k: int = 10
+    alpha: float = 0.60
+    candidate_pool_size: int = 60
+    use_agent: bool = True
+
+
+class ReadingListRequest(BaseModel):
+    paper_ids: List[str]
     top_k: int = 10
     alpha: float = 0.60
     candidate_pool_size: int = 60
@@ -118,8 +131,34 @@ def recommend_endpoint(req: RecommendRequest):
         raise HTTPException(status_code=503, detail="Recommender not initialized")
     
     try:
+        # 1. Reading list personalization
+        if req.reading_list_ids and len(req.reading_list_ids) > 0:
+            if req.use_agent and agent_recommender:
+                return agent_recommender.invoke(
+                    reading_list_ids=req.reading_list_ids,
+                    alpha=req.alpha,
+                    top_k=req.top_k,
+                    candidate_pool_size=req.candidate_pool_size
+                )
+            return recommender.recommend_for_reading_list(
+                paper_ids=req.reading_list_ids,
+                top_k=req.top_k,
+                alpha=req.alpha,
+                candidate_pool_size=req.candidate_pool_size
+            )
+
+        # 2. Agentic LangGraph pipeline execution
+        if req.use_agent and agent_recommender:
+            return agent_recommender.invoke(
+                query=req.query,
+                seed_paper_id=req.paper_id,
+                alpha=req.alpha,
+                top_k=req.top_k,
+                candidate_pool_size=req.candidate_pool_size
+            )
+
+        # 3. Direct Fast Path
         target_pid = req.paper_id
-        # If no explicit paper_id, check if query matches a known title or ID
         if req.query and not target_pid:
             found_pid, _ = recommender.get_paper_by_title_or_id(req.query)
             if found_pid:
@@ -133,6 +172,32 @@ def recommend_endpoint(req: RecommendRequest):
             candidate_pool_size=req.candidate_pool_size
         )
         return results
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/user/reading-list/recommend")
+def reading_list_recommend_endpoint(req: ReadingListRequest):
+    """Personalized recommendations generated from user's reading list profile."""
+    if not recommender:
+        raise HTTPException(status_code=503, detail="Recommender not initialized")
+    
+    try:
+        if agent_recommender:
+            return agent_recommender.invoke(
+                reading_list_ids=req.paper_ids,
+                alpha=req.alpha,
+                top_k=req.top_k,
+                candidate_pool_size=req.candidate_pool_size
+            )
+        return recommender.recommend_for_reading_list(
+            paper_ids=req.paper_ids,
+            top_k=req.top_k,
+            alpha=req.alpha,
+            candidate_pool_size=req.candidate_pool_size
+        )
     except Exception as e:
         import traceback
         traceback.print_exc()

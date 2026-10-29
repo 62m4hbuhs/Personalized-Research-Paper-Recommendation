@@ -361,6 +361,132 @@ class HybridRecommender:
                 f"{graph_score:.1%} citation network proximity."
             )
 
+    def recommend_for_reading_list(
+        self,
+        paper_ids: list,
+        top_k: int = 10,
+        alpha: float = 0.60,
+        candidate_pool_size: int = 60
+    ) -> dict:
+        """
+        Generates personalized recommendations based on the user's saved reading list.
+        Constructs user profile centroid vectors in both SciBERT space and GraphSAGE space.
+        """
+        valid_pids = [pid for pid in paper_ids if pid in self.metadata]
+        if not valid_pids:
+            raise ValueError("No valid papers provided in the reading list.")
+
+        # 1. Build User Semantic Profile Vector
+        text_vectors = []
+        for pid in valid_pids:
+            if pid in self.paper_id_to_faiss_idx:
+                f_idx = self.paper_id_to_faiss_idx[pid]
+                vec = np.zeros((1, 768), dtype=np.float32)
+                self.faiss_index.reconstruct(f_idx, vec[0])
+                text_vectors.append(vec[0])
+            else:
+                meta = self.metadata[pid]
+                text = str(meta.get("abstract") or meta.get("title") or "")
+                vec = self.encode_text(text)
+                text_vectors.append(vec[0])
+
+        user_text_vec = np.mean(text_vectors, axis=0, keepdims=True)
+        faiss.normalize_L2(user_text_vec)
+
+        # 2. Build User Graph Profile Vector
+        graph_vectors = []
+        for pid in valid_pids:
+            if pid in self.paper_id_to_node_idx:
+                n_idx = self.paper_id_to_node_idx[pid]
+                graph_vectors.append(self.graph_embeddings[n_idx])
+
+        if graph_vectors:
+            user_graph_vec = np.mean(graph_vectors, axis=0)
+            user_graph_vec = user_graph_vec / (np.linalg.norm(user_graph_vec) + 1e-9)
+        else:
+            user_graph_vec = None
+
+        # 3. Retrieve Candidate Papers via FAISS
+        search_k = min(candidate_pool_size + len(valid_pids), self.faiss_index.ntotal)
+        scores, indices = self.faiss_index.search(user_text_vec, search_k)
+
+        reading_set = set(valid_pids)
+        candidates = []
+        beta = 0.05
+
+        for score, idx in zip(scores[0], indices[0]):
+            if idx < 0:
+                continue
+            cand_id = self.faiss_paper_ids[idx]
+            if cand_id in reading_set:
+                continue  # Don't recommend papers the user already has in reading list
+
+            cand_meta = self.metadata.get(cand_id, {})
+            in_graph = cand_id in self.paper_id_to_node_idx
+            g_emb = self.graph_embeddings[self.paper_id_to_node_idx[cand_id]] if in_graph else None
+
+            candidates.append({
+                "paperId": cand_id,
+                "semantic_score": float(score),
+                "in_graph": in_graph,
+                "graph_emb": g_emb,
+                "title": cand_meta.get("title", "Untitled"),
+                "abstract": cand_meta.get("abstract", "") or "",
+                "year": cand_meta.get("year"),
+                "citationCount": cand_meta.get("citationCount", 0) or 0
+            })
+
+        # 4. Rank Candidates
+        ranked_results = []
+        for c in candidates:
+            sem_score = c["semantic_score"]
+            if c["in_graph"] and user_graph_vec is not None:
+                cos_sim = float(np.dot(user_graph_vec, c["graph_emb"]))
+                graph_score = max(0.0, min(1.0, (1.0 + cos_sim) / 2.0))
+                fallback_used = False
+            else:
+                graph_score = sem_score
+                fallback_used = True
+
+            cites = int(c["citationCount"])
+            citation_prior = float(np.log1p(cites) / np.log1p(self.max_citations))
+            hybrid_score = float(alpha * sem_score + (1.0 - alpha) * graph_score + beta * citation_prior)
+
+            explanation = (
+                f"Personalized match aligned with your {len(valid_pids)} saved reading-list papers: "
+                f"{sem_score:.1%} topic congruence and {graph_score:.1%} academic neighborhood proximity."
+            )
+
+            ranked_results.append({
+                "paperId": c["paperId"],
+                "title": c["title"],
+                "abstract": c["abstract"],
+                "year": c["year"],
+                "citationCount": cites,
+                "hybrid_score": round(float(hybrid_score), 4),
+                "semantic_score": round(float(sem_score), 4),
+                "graph_score": round(float(graph_score), 4),
+                "citation_prior": round(float(citation_prior), 4),
+                "in_graph": c["in_graph"],
+                "fallback_applied": fallback_used,
+                "explanation": explanation
+            })
+
+        ranked_results.sort(key=lambda x: x["hybrid_score"], reverse=True)
+        final_recs = ranked_results[:top_k]
+        for i, item in enumerate(final_recs, 1):
+            item["rank"] = i
+
+        saved_meta = [self._clean_paper_dict(self.metadata[pid]) for pid in valid_pids]
+        return {
+            "query_type": "user_reading_list_profile",
+            "reading_list_count": len(valid_pids),
+            "reading_list_papers": saved_meta,
+            "alpha": float(alpha),
+            "total_candidates_analyzed": len(candidates),
+            "recommendations": [self._clean_paper_dict(r) for r in final_recs]
+        }
+
 
 # Self-test if executed directly
 if __name__ == "__main__":
