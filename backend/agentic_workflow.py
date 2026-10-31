@@ -58,11 +58,25 @@ class LangGraphRecommenderAgent:
         smith_key = os.getenv("LANGSMITH_API_KEY") or os.getenv("LANGCHAIN_API_KEY")
         if smith_key:
             os.environ["LANGCHAIN_TRACING_V2"] = "true"
+            os.environ["LANGSMITH_TRACING"] = "true"
             os.environ["LANGCHAIN_API_KEY"] = smith_key
             os.environ["LANGSMITH_API_KEY"] = smith_key
-            os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT") or "Personalized-Research-Paper-Recommendation"
             os.environ["LANGCHAIN_ENDPOINT"] = os.getenv("LANGSMITH_ENDPOINT") or "https://api.smith.langchain.com"
-            print("LangSmith Cloud Tracing active (Project: Personalized-Research-Paper-Recommendation)!")
+            os.environ["LANGSMITH_ENDPOINT"] = os.getenv("LANGSMITH_ENDPOINT") or "https://api.smith.langchain.com"
+
+            agent_id = os.getenv("LANGSMITH_AGENT_ID")
+            if agent_id:
+                os.environ["LANGSMITH_AGENT_ID"] = agent_id
+                os.environ["LANGSMITH_AGENT_ENVIRONMENT"] = os.getenv("LANGSMITH_AGENT_ENVIRONMENT") or "local"
+                os.environ.pop("LANGCHAIN_PROJECT", None)
+                os.environ.pop("LANGSMITH_PROJECT", None)
+                print(f"LangSmith Cloud Tracing active (Agent: {agent_id})!")
+            else:
+                proj = os.getenv("LANGCHAIN_PROJECT") or os.getenv("LANGSMITH_PROJECT") or "Personalized-Research-Paper-Recommendation"
+                os.environ["LANGCHAIN_PROJECT"] = proj
+                os.environ.pop("LANGSMITH_AGENT_ID", None)
+                os.environ.pop("LANGSMITH_AGENT_ENVIRONMENT", None)
+                print(f"LangSmith Cloud Tracing active (Project: {proj})!")
 
         key = (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or "").strip()
         if key and not key.startswith("your_") and len(key) > 10:
@@ -450,7 +464,19 @@ class LangGraphRecommenderAgent:
             "execution_time_ms": 0.0
         }
 
-        final_state = self.workflow.invoke(initial_state)
+        # Set graph run config for LangSmith tracing
+        run_label = query or (seed_paper_id[:12] if seed_paper_id else "Reading List")
+        config = {
+            "run_name": f"LangGraph Recommender ({run_label})",
+            "metadata": {
+                "intent_query": query,
+                "seed_id": seed_paper_id,
+                "alpha": alpha,
+                "top_k": top_k
+            }
+        }
+
+        final_state = self.workflow.invoke(initial_state, config=config)
         total_time_ms = round((time.time() - t_start) * 1000, 2)
         final_state["execution_time_ms"] = total_time_ms
 
