@@ -9,3 +9,7 @@ data/
 *.index
 .obsidian/workspace.json
 obsidian_vault/.obsidian/workspace.json
+# PDF documents
+*.pdf
+!ScholarGraph_AI_Paper_Recommendations.pdf
+!ScholarGraph_Project_Documentation.pdf
