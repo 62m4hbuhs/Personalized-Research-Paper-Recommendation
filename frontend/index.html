@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ScholarGraph • Futuristic Academic Literature Discovery</title>
+  <title>ScholarGraph • AI Academic Paper Recommendation System</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -11,47 +11,50 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-    /* Color & Theme Variables */
+    /* ========================================================= */
+    /* LIGHT-BLUE / CYAN PLASMA THEME VARIABLES                 */
+    /* Inspired by luminous blue plasma sphere                   */
+    /* ========================================================= */
     :root {
-      --bg-color: #f8fafc;
-      --text-main: #0f172a;
-      --text-muted: #64748b;
-      --card-bg: rgba(255, 255, 255, 0.72);
-      --card-border: rgba(226, 232, 240, 0.85);
-      --card-shadow: 0 12px 32px -8px rgba(99, 102, 241, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02);
+      --bg-color: #f6faff;
+      --text-main: #0c1e36;
+      --text-muted: #526e8c;
+      --card-bg: rgba(255, 255, 255, 0.76);
+      --card-border: rgba(186, 230, 253, 0.85);
+      --card-shadow: 0 12px 36px -8px rgba(14, 165, 233, 0.1), 0 2px 6px rgba(0, 0, 0, 0.02);
       --glass-inset: inset 0 1px 1px rgba(255, 255, 255, 0.95);
-      --input-bg: rgba(255, 255, 255, 0.88);
-      --input-border: #cbd5e1;
-      --header-bg: rgba(255, 255, 255, 0.82);
-      --header-border: rgba(226, 232, 240, 0.8);
-      --pill-bg: rgba(241, 245, 249, 0.8);
-      --pill-border: rgba(203, 213, 225, 0.8);
-      --advisor-bg: linear-gradient(135deg, rgba(238, 242, 255, 0.85) 0%, rgba(243, 232, 255, 0.75) 100%);
-      --advisor-border: rgba(129, 140, 248, 0.35);
-      --advisor-inner: rgba(255, 255, 255, 0.8);
-      --advisor-text: #1e1b4b;
-      --orb-opacity: 0.35;
+      --input-bg: rgba(255, 255, 255, 0.92);
+      --input-border: #bae6fd;
+      --header-bg: rgba(255, 255, 255, 0.85);
+      --header-border: rgba(186, 230, 253, 0.8);
+      --pill-bg: rgba(240, 249, 255, 0.85);
+      --pill-border: rgba(186, 230, 253, 0.9);
+      --advisor-bg: linear-gradient(135deg, rgba(224, 242, 254, 0.85) 0%, rgba(240, 249, 255, 0.95) 100%);
+      --advisor-border: rgba(56, 189, 248, 0.45);
+      --advisor-inner: rgba(255, 255, 255, 0.9);
+      --advisor-text: #03446a;
+      --orb-opacity: 0.45;
     }
 
     body.dark {
-      --bg-color: #060913;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --card-bg: rgba(13, 19, 36, 0.65);
-      --card-border: rgba(255, 255, 255, 0.09);
-      --card-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.6);
+      --bg-color: #040914;
+      --text-main: #f0f9ff;
+      --text-muted: #7dd3fc;
+      --card-bg: rgba(7, 18, 38, 0.68);
+      --card-border: rgba(56, 189, 248, 0.16);
+      --card-shadow: 0 20px 48px -12px rgba(2, 132, 199, 0.35);
       --glass-inset: inset 0 1px 1px rgba(255, 255, 255, 0.12);
-      --input-bg: rgba(15, 23, 42, 0.85);
-      --input-border: rgba(255, 255, 255, 0.1);
-      --header-bg: rgba(6, 9, 19, 0.85);
-      --header-border: rgba(255, 255, 255, 0.07);
-      --pill-bg: rgba(15, 23, 42, 0.8);
-      --pill-border: rgba(255, 255, 255, 0.08);
-      --advisor-bg: linear-gradient(135deg, rgba(30, 27, 75, 0.75) 0%, rgba(24, 24, 47, 0.65) 100%);
-      --advisor-border: rgba(129, 140, 248, 0.3);
-      --advisor-inner: rgba(6, 9, 19, 0.6);
-      --advisor-text: #e0e7ff;
-      --orb-opacity: 0.65;
+      --input-bg: rgba(8, 24, 48, 0.85);
+      --input-border: rgba(56, 189, 248, 0.25);
+      --header-bg: rgba(4, 9, 20, 0.88);
+      --header-border: rgba(56, 189, 248, 0.12);
+      --pill-bg: rgba(8, 24, 52, 0.8);
+      --pill-border: rgba(56, 189, 248, 0.2);
+      --advisor-bg: linear-gradient(135deg, rgba(8, 34, 68, 0.75) 0%, rgba(4, 20, 42, 0.85) 100%);
+      --advisor-border: rgba(56, 189, 248, 0.4);
+      --advisor-inner: rgba(3, 14, 30, 0.75);
+      --advisor-text: #e0f2fe;
+      --orb-opacity: 0.75;
     }
 
     body {
@@ -63,11 +66,11 @@
 
     .code-font { font-family: 'JetBrains Mono', monospace; }
 
-    /* Futuristic Liquid Glassmorphism */
+    /* Frosted Ice-Glass Panels */
     .glass-panel {
       background: var(--card-bg);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      backdrop-filter: blur(24px) saturate(190%);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
       border: 1px solid var(--card-border);
       box-shadow: var(--card-shadow), var(--glass-inset);
       transition: all 0.25s ease;
@@ -75,58 +78,64 @@
 
     .glass-card {
       background: var(--card-bg);
-      backdrop-filter: blur(20px) saturate(170%);
-      -webkit-backdrop-filter: blur(20px) saturate(170%);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
       border: 1px solid var(--card-border);
       box-shadow: var(--card-shadow), var(--glass-inset);
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .glass-card:hover {
-      border-color: rgba(99, 102, 241, 0.4);
+      border-color: rgba(56, 189, 248, 0.55);
       transform: translateY(-2px);
-      box-shadow: 0 16px 36px -10px rgba(99, 102, 241, 0.16), var(--glass-inset);
+      box-shadow: 0 16px 40px -10px rgba(14, 165, 233, 0.22), var(--glass-inset);
     }
 
-    /* Iridescent Gradients (matching futuristic liquid glass sphere) */
+    /* Light Blue / Cyan Neon Gradient Accents */
     .gradient-text {
-      background: linear-gradient(135deg, #06b6d4 0%, #6366f1 45%, #a855f7 100%);
+      background: linear-gradient(135deg, #00d2ff 0%, #38bdf8 50%, #0284c7 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .gradient-pill {
-      background: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
+    .gradient-btn {
+      background: linear-gradient(135deg, #00d2ff 0%, #0284c7 100%);
+      box-shadow: 0 4px 20px -2px rgba(14, 165, 233, 0.45);
+    }
+    .gradient-btn:hover {
+      background: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%);
+      box-shadow: 0 6px 24px -2px rgba(14, 165, 233, 0.6);
     }
 
-    /* Ambient Liquid Orb Glows */
+    /* Plasma Orbs Glow (Matching Uploaded Light-Blue Plasma Sphere) */
     .orb {
-      filter: blur(80px);
+      filter: blur(90px);
       opacity: var(--orb-opacity);
       transition: opacity 0.4s ease;
       will-change: transform;
     }
-    @keyframes floatOrb {
-      0%, 100% { transform: translateY(0px) scale(1); }
-      50% { transform: translateY(-20px) scale(1.05); }
+    @keyframes floatPlasma {
+      0%, 100% { transform: translateY(0px) scale(1) rotate(0deg); }
+      50% { transform: translateY(-25px) scale(1.08) rotate(15deg); }
     }
-    .animate-float-slow { animation: floatOrb 12s ease-in-out infinite; }
-    .animate-float-delayed { animation: floatOrb 16s ease-in-out infinite 4s; }
+    .animate-plasma-1 { animation: floatPlasma 11s ease-in-out infinite; }
+    .animate-plasma-2 { animation: floatPlasma 15s ease-in-out infinite 3s; }
+    .animate-plasma-3 { animation: floatPlasma 13s ease-in-out infinite 6s; }
 
-    /* Custom Scrollbar */
+    /* Custom Scrollbar in Sky-Blue */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.35); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.6); }
+    ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.35); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(14, 165, 233, 0.7); }
   </style>
 </head>
-<body class="min-h-screen flex flex-col antialiased selection:bg-indigo-500/25 selection:text-indigo-400 relative">
+<body class="min-h-screen flex flex-col antialiased selection:bg-sky-500/25 selection:text-sky-400 relative">
 
   <!-- ========================================== -->
-  <!-- AMBIENT LIQUID GLASS LIGHT ORBS            -->
+  <!-- LIGHT-BLUE PLASMA REFRACTION ORBS          -->
   <!-- ========================================== -->
   <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
-    <div class="absolute -top-32 -left-32 w-[480px] h-[480px] rounded-full bg-gradient-to-tr from-cyan-400 to-blue-600 orb animate-float-slow"></div>
-    <div class="absolute top-1/4 -right-32 w-[520px] h-[520px] rounded-full bg-gradient-to-tr from-purple-500 to-indigo-600 orb animate-float-delayed"></div>
-    <div class="absolute -bottom-32 left-1/4 w-[480px] h-[480px] rounded-full bg-gradient-to-tr from-indigo-500 to-cyan-400 orb animate-float-slow"></div>
+    <div class="absolute -top-32 -left-32 w-[520px] h-[520px] rounded-full bg-gradient-to-tr from-cyan-400 via-sky-400 to-blue-500 orb animate-plasma-1"></div>
+    <div class="absolute top-1/4 -right-32 w-[560px] h-[560px] rounded-full bg-gradient-to-tr from-sky-400 via-cyan-300 to-blue-600 orb animate-plasma-2"></div>
+    <div class="absolute -bottom-32 left-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-blue-500 via-cyan-400 to-sky-300 orb animate-plasma-3"></div>
   </div>
 
   <!-- ========================================== -->
@@ -137,8 +146,8 @@
       
       <!-- Logo & Brand -->
       <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('recs')">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 ring-1 ring-white/30">
-          <i class="fa-solid fa-graduation-cap text-white text-base"></i>
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-400 via-sky-500 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/30 ring-2 ring-sky-300/40">
+          <i class="fa-solid fa-atom text-white text-base"></i>
         </div>
         <div>
           <span class="text-lg font-bold tracking-tight gradient-text">ScholarGraph</span>
@@ -148,13 +157,13 @@
 
       <!-- Segmented Navigation Controls -->
       <nav style="background: var(--pill-bg); border-color: var(--pill-border);" class="flex items-center p-1 rounded-xl border shadow-sm">
-        <button id="tab-recs" onclick="switchTab('recs')" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white shadow-sm flex items-center gap-1.5 transition">
+        <button id="tab-recs" onclick="switchTab('recs')" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-sky-500 text-white shadow-md shadow-sky-500/30 flex items-center gap-1.5 transition">
           <i class="fa-solid fa-compass text-xs"></i> Recommendations
         </button>
-        <button id="tab-graph" onclick="switchTab('graph')" style="color: var(--text-muted);" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg hover:text-indigo-500 flex items-center gap-1.5 transition">
+        <button id="tab-graph" onclick="switchTab('graph')" style="color: var(--text-muted);" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg hover:text-sky-500 flex items-center gap-1.5 transition">
           <i class="fa-solid fa-circle-nodes text-xs"></i> Citation Graph
         </button>
-        <button id="tab-eval" onclick="switchTab('eval')" style="color: var(--text-muted);" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg hover:text-indigo-500 flex items-center gap-1.5 transition">
+        <button id="tab-eval" onclick="switchTab('eval')" style="color: var(--text-muted);" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg hover:text-sky-500 flex items-center gap-1.5 transition">
           <i class="fa-solid fa-chart-line text-xs"></i> Benchmark
         </button>
       </nav>
@@ -162,32 +171,32 @@
       <!-- Right Header Actions -->
       <div class="flex items-center gap-2">
         
-        <!-- Theme Toggle Button (Light/Dark Mode) -->
-        <button id="btn-theme-toggle" onclick="toggleTheme()" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="p-2 rounded-xl border hover:border-indigo-400 transition shadow-sm flex items-center justify-center w-9 h-9" title="Toggle Light / Dark Mode">
-          <i id="theme-icon" class="fa-solid fa-moon text-indigo-500 text-sm"></i>
+        <!-- Theme Toggle Button (Light / Dark Mode) -->
+        <button id="btn-theme-toggle" onclick="toggleTheme()" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="p-2 rounded-xl border hover:border-sky-400 transition shadow-sm flex items-center justify-center w-9 h-9" title="Toggle Light / Dark Mode">
+          <i id="theme-icon" class="fa-solid fa-moon text-sky-500 text-sm"></i>
         </button>
 
         <!-- Library (Reading List) Button -->
-        <button onclick="toggleReadingListModal()" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="px-3 py-1.5 rounded-xl border hover:border-indigo-400 text-xs font-semibold flex items-center gap-2 transition shadow-sm h-9">
-          <i class="fa-solid fa-bookmark text-indigo-500 text-xs"></i>
+        <button onclick="toggleReadingListModal()" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="px-3 py-1.5 rounded-xl border hover:border-sky-400 text-xs font-semibold flex items-center gap-2 transition shadow-sm h-9">
+          <i class="fa-solid fa-bookmark text-sky-500 text-xs"></i>
           <span>Library</span>
-          <span id="reading-list-badge" class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-indigo-600 text-white">0</span>
+          <span id="reading-list-badge" class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-sky-500 text-white shadow-sm shadow-sky-500/40">0</span>
         </button>
 
         <!-- Discreet AI Status Pill -->
         <div class="relative group hidden sm:block">
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 cursor-default">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/25 cursor-default">
+            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
             <span>AI Ready</span>
           </span>
-          <div style="background: var(--card-bg); border-color: var(--card-border); color: var(--text-main);" class="hidden group-hover:block absolute right-0 top-full mt-2 w-60 p-3 rounded-xl border shadow-2xl text-[11px] z-50 space-y-1.5 backdrop-blur-xl">
+          <div style="background: var(--card-bg); border-color: var(--card-border); color: var(--text-main);" class="hidden group-hover:block absolute right-0 top-full mt-2 w-64 p-3 rounded-xl border shadow-2xl text-[11px] z-50 space-y-1.5 backdrop-blur-2xl">
             <div class="font-bold mb-1 flex items-center gap-1.5">
-              <i class="fa-solid fa-microchip text-indigo-500"></i> Active Architecture
+              <i class="fa-solid fa-microchip text-sky-500"></i> Active Architecture
             </div>
-            <div class="flex items-center gap-1.5"><i class="fa-solid fa-check text-emerald-500 text-[10px]"></i> SciBERT 768-d Vector Space</div>
-            <div class="flex items-center gap-1.5"><i class="fa-solid fa-check text-emerald-500 text-[10px]"></i> GraphSAGE 128-d Topology</div>
-            <div class="flex items-center gap-1.5"><i class="fa-solid fa-check text-emerald-500 text-[10px]"></i> LangGraph StateGraph Agent</div>
-            <div class="flex items-center gap-1.5"><i class="fa-solid fa-check text-cyan-500 text-[10px]"></i> Google Gemini 2.5 Flash</div>
+            <div class="flex items-center gap-1.5"><i class="fa-solid fa-check text-cyan-500 text-[10px]"></i> SciBERT 768-d Vector Space</div>
+            <div class="flex items-center gap-1.5"><i class="fa-solid fa-check text-cyan-500 text-[10px]"></i> GraphSAGE 128-d Topology</div>
+            <div class="flex items-center gap-1.5"><i class="fa-solid fa-check text-cyan-500 text-[10px]"></i> LangGraph StateGraph Agent</div>
+            <div class="flex items-center gap-1.5"><i class="fa-solid fa-check text-sky-500 text-[10px]"></i> Google Gemini 3.5 Flash Lite</div>
           </div>
         </div>
       </div>
@@ -204,7 +213,7 @@
     <!-- ========================================== -->
     <div id="view-recs" class="space-y-6">
       
-      <!-- Futuristic Glass Search Panel -->
+      <!-- Frosted Ice-Glass Search Panel -->
       <section class="glass-panel rounded-2xl p-6 shadow-xl relative overflow-hidden">
         
         <!-- Header & Mode Switcher -->
@@ -216,10 +225,10 @@
 
           <!-- Mode Toggle Pill -->
           <div style="background: var(--pill-bg); border-color: var(--pill-border);" class="flex rounded-xl border p-0.5 text-xs shadow-sm">
-            <button id="btn-mode-seed" onclick="setSearchMode('seed')" class="px-3.5 py-1.5 font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5">
+            <button id="btn-mode-seed" onclick="setSearchMode('seed')" class="px-3.5 py-1.5 font-semibold rounded-lg bg-sky-500 text-white shadow-sm shadow-sky-500/30 transition flex items-center gap-1.5">
               <i class="fa-solid fa-book-bookmark text-[11px]"></i> Seed Paper
             </button>
-            <button id="btn-mode-query" onclick="setSearchMode('query')" style="color: var(--text-muted);" class="px-3.5 py-1.5 font-semibold rounded-lg hover:text-indigo-500 transition flex items-center gap-1.5">
+            <button id="btn-mode-query" onclick="setSearchMode('query')" style="color: var(--text-muted);" class="px-3.5 py-1.5 font-semibold rounded-lg hover:text-sky-500 transition flex items-center gap-1.5">
               <i class="fa-solid fa-magnifying-glass text-[11px]"></i> Topic Query
             </button>
           </div>
@@ -228,7 +237,7 @@
         <!-- Search Input Bar -->
         <div class="relative">
           <div class="relative flex items-center">
-            <i class="fa-solid fa-search absolute left-4 text-slate-400 text-sm"></i>
+            <i class="fa-solid fa-search absolute left-4 text-sky-400 text-sm"></i>
             <input 
               type="text" 
               id="search-input"
@@ -236,18 +245,18 @@
               onkeydown="if(event.key==='Enter') executeSearch()"
               placeholder="Search by paper title or enter topic keywords..."
               style="background: var(--input-bg); border-color: var(--input-border); color: var(--text-main);"
-              class="w-full pl-11 pr-32 py-3.5 rounded-xl border text-sm transition focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 shadow-inner"
+              class="w-full pl-11 pr-32 py-3.5 rounded-xl border text-sm transition focus:outline-none focus:ring-2 focus:ring-sky-400/40 focus:border-sky-400 shadow-inner"
               value="How Powerful are Graph Neural Networks?"
             />
             
-            <button id="btn-clear-search" onclick="clearSearchInput()" class="hidden absolute right-28 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 transition" title="Clear">
+            <button id="btn-clear-search" onclick="clearSearchInput()" class="hidden absolute right-28 text-slate-400 hover:text-sky-500 p-1 transition" title="Clear">
               <i class="fa-solid fa-xmark text-xs"></i>
             </button>
 
             <button 
               id="btn-recommend"
               onclick="executeSearch()"
-              class="absolute right-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-lg text-xs transition shadow-md shadow-indigo-600/30 flex items-center gap-1.5">
+              class="absolute right-1.5 px-4 py-2 gradient-btn text-white font-semibold rounded-lg text-xs transition flex items-center gap-1.5">
               <span>Recommend</span>
               <i class="fa-solid fa-arrow-right text-[10px]"></i>
             </button>
@@ -257,13 +266,13 @@
           <div id="autocomplete-dropdown" style="background: var(--card-bg); border-color: var(--card-border);" class="hidden absolute left-0 right-0 top-full mt-1.5 rounded-xl border shadow-2xl z-40 max-h-72 overflow-y-auto backdrop-blur-2xl"></div>
         </div>
 
-        <!-- Popular Queries Chips -->
+        <!-- Popular Queries Chips (Light-Blue / Cyan) -->
         <div class="flex items-center gap-1.5 mt-3 text-xs flex-wrap">
           <span style="color: var(--text-muted);" class="font-medium text-[11px] mr-1">Popular:</span>
-          <button onclick="setQueryPreset('A Survey of Graph Neural Networks for Recommender Systems: Challenges, Methods, and Directions')" style="background: var(--pill-bg); border-color: var(--pill-border);" class="px-2.5 py-1 rounded-lg border text-indigo-600 dark:text-indigo-300 text-[11px] hover:border-indigo-400 transition">GNN Recommenders Survey</button>
-          <button onclick="setQueryPreset('How Powerful are Graph Neural Networks?')" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="px-2.5 py-1 rounded-lg border text-[11px] hover:border-indigo-400 transition">How Powerful are GNNs?</button>
-          <button onclick="setQueryPreset('Inductive Representation Learning on Large Graphs')" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="px-2.5 py-1 rounded-lg border text-[11px] hover:border-indigo-400 transition">GraphSAGE</button>
-          <button onclick="setQueryPreset('Semi-Supervised Classification with Graph Convolutional Networks')" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="px-2.5 py-1 rounded-lg border text-[11px] hover:border-indigo-400 transition">GCN (Kipf & Welling)</button>
+          <button onclick="setQueryPreset('A Survey of Graph Neural Networks for Recommender Systems: Challenges, Methods, and Directions')" style="background: var(--pill-bg); border-color: var(--pill-border);" class="px-2.5 py-1 rounded-lg border text-sky-600 dark:text-sky-300 text-[11px] hover:border-sky-400 transition">GNN Recommenders Survey</button>
+          <button onclick="setQueryPreset('How Powerful are Graph Neural Networks?')" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="px-2.5 py-1 rounded-lg border text-[11px] hover:border-sky-400 transition">How Powerful are GNNs?</button>
+          <button onclick="setQueryPreset('Inductive Representation Learning on Large Graphs')" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="px-2.5 py-1 rounded-lg border text-[11px] hover:border-sky-400 transition">GraphSAGE</button>
+          <button onclick="setQueryPreset('Semi-Supervised Classification with Graph Convolutional Networks')" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="px-2.5 py-1 rounded-lg border text-[11px] hover:border-sky-400 transition">GCN (Kipf & Welling)</button>
         </div>
 
         <!-- Signal Fusion Controls -->
@@ -271,20 +280,20 @@
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
             <div class="flex items-center gap-2">
               <span class="text-xs font-semibold flex items-center gap-1.5">
-                <i class="fa-solid fa-sliders text-indigo-500"></i> Signal Fusion Weight (&alpha; = <span id="alpha-val" class="text-indigo-500 font-bold">0.60</span>)
+                <i class="fa-solid fa-sliders text-sky-500"></i> Signal Fusion Weight (&alpha; = <span id="alpha-val" class="text-sky-500 font-bold">0.60</span>)
               </span>
               <span style="color: var(--text-muted);" class="text-[11px] hidden sm:inline">&bull; Content semantics vs network</span>
             </div>
 
             <div class="flex items-center gap-1 text-[11px]">
-              <button onclick="setAlphaPreset(0.80)" style="background: var(--pill-bg); border-color: var(--pill-border);" class="px-2 py-0.5 rounded border text-indigo-600 dark:text-indigo-300 hover:border-indigo-400 transition">Content Focus</button>
-              <button onclick="setAlphaPreset(0.60)" class="px-2 py-0.5 rounded bg-indigo-600 text-white font-medium transition">Balanced</button>
-              <button onclick="setAlphaPreset(0.20)" style="background: var(--pill-bg); border-color: var(--pill-border);" class="px-2 py-0.5 rounded border text-purple-600 dark:text-purple-300 hover:border-purple-400 transition">Citation Network</button>
+              <button onclick="setAlphaPreset(0.80)" style="background: var(--pill-bg); border-color: var(--pill-border);" class="px-2 py-0.5 rounded border text-sky-600 dark:text-sky-300 hover:border-sky-400 transition">Content Focus</button>
+              <button onclick="setAlphaPreset(0.60)" class="px-2 py-0.5 rounded bg-sky-500 text-white font-medium shadow-sm transition">Balanced</button>
+              <button onclick="setAlphaPreset(0.20)" style="background: var(--pill-bg); border-color: var(--pill-border);" class="px-2 py-0.5 rounded border text-cyan-600 dark:text-cyan-300 hover:border-cyan-400 transition">Citation Network</button>
             </div>
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-[11px] text-purple-600 dark:text-purple-400 font-medium shrink-0">Citation Graph</span>
+            <span class="text-[11px] text-cyan-600 dark:text-cyan-400 font-medium shrink-0">Citation Graph</span>
             <input 
               type="range" 
               id="alpha-slider" 
@@ -293,25 +302,25 @@
               step="0.05" 
               value="0.60" 
               oninput="updateAlpha(this.value)"
-              class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-indigo-600 bg-slate-200 dark:bg-slate-800"
+              class="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-sky-500 bg-sky-100 dark:bg-slate-800"
             />
-            <span class="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium shrink-0">Text Semantics</span>
+            <span class="text-[11px] text-sky-600 dark:text-sky-400 font-medium shrink-0">Text Semantics</span>
           </div>
         </div>
       </section>
 
       <!-- Active Seed Paper Reference Card -->
-      <section id="seed-paper-banner" class="hidden glass-panel rounded-xl p-4 border-l-4 border-indigo-500 space-y-2">
+      <section id="seed-paper-banner" class="hidden glass-panel rounded-xl p-4 border-l-4 border-sky-400 space-y-2">
         <div class="flex items-start justify-between gap-4">
           <div class="space-y-1">
             <div class="flex items-center gap-2">
-              <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">Active Seed Paper</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/25">Active Seed Paper</span>
               <span id="seed-citations" style="color: var(--text-muted);" class="text-[11px]"></span>
             </div>
             <h3 id="seed-title" class="text-base font-bold leading-snug"></h3>
             <p id="seed-meta" style="color: var(--text-muted);" class="text-xs"></p>
             <p id="seed-abstract" style="color: var(--text-main);" class="text-xs leading-relaxed line-clamp-2"></p>
-            <button id="btn-seed-abstract-toggle" onclick="toggleSeedAbstract()" class="text-[11px] text-indigo-500 hover:text-indigo-600 font-medium transition">
+            <button id="btn-seed-abstract-toggle" onclick="toggleSeedAbstract()" class="text-[11px] text-sky-500 hover:text-sky-600 font-semibold transition">
               Show full abstract
             </button>
           </div>
@@ -321,19 +330,19 @@
         </div>
       </section>
 
-      <!-- Google Gemini AI Research Advisor Synthesis (Futuristic Liquid Glass Briefing) -->
+      <!-- Google Gemini AI Research Advisor Synthesis (Light-Blue Plasma Briefing) -->
       <section id="gemini-advisor-box" style="background: var(--advisor-bg); border: 1px solid var(--advisor-border);" class="hidden rounded-2xl p-5 shadow-xl space-y-3 backdrop-blur-2xl">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 text-white flex items-center justify-center text-xs shadow-md">
+            <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-400 to-sky-600 text-white flex items-center justify-center text-xs shadow-md shadow-sky-500/40">
               <i class="fa-solid fa-wand-magic-sparkles"></i>
             </div>
             <div>
               <h4 style="color: var(--advisor-text);" class="text-xs font-bold uppercase tracking-wider">AI Research Advisor Synthesis</h4>
-              <span class="text-[10px] text-indigo-600 dark:text-indigo-300 font-mono font-semibold">Google Gemini 2.5 Flash</span>
+              <span class="text-[10px] text-sky-600 dark:text-sky-300 font-mono font-semibold">Google Gemini 3.5 Flash Lite</span>
             </div>
           </div>
-          <span class="text-[10px] px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20 font-semibold">Literature Overview</span>
+          <span class="text-[10px] px-2.5 py-0.5 rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-300 border border-sky-400/30 font-semibold">Literature Overview</span>
         </div>
         <div style="background: var(--advisor-inner); border-color: var(--advisor-border); color: var(--advisor-text);" class="text-xs leading-relaxed font-sans p-3.5 rounded-xl border shadow-inner">
           <p id="gemini-synthesis-text"></p>
@@ -344,13 +353,13 @@
       <section id="agent-trace-banner" class="hidden glass-card rounded-xl p-3 text-xs">
         <div class="flex items-center justify-between cursor-pointer" onclick="toggleTraceDetails()">
           <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
             <span class="font-semibold flex items-center gap-1.5">
-              <i class="fa-solid fa-network-wired text-indigo-500 text-xs"></i> LangGraph Agentic Pipeline
+              <i class="fa-solid fa-network-wired text-sky-500 text-xs"></i> LangGraph Agentic Pipeline
             </span>
-            <span id="agent-runtime-badge" style="background: var(--pill-bg); border-color: var(--pill-border);" class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded border"></span>
+            <span id="agent-runtime-badge" style="background: var(--pill-bg); border-color: var(--pill-border);" class="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 px-1.5 py-0.5 rounded border"></span>
           </div>
-          <button class="text-xs text-indigo-500 hover:text-indigo-600 flex items-center gap-1 transition">
+          <button class="text-xs text-sky-500 hover:text-sky-600 flex items-center gap-1 transition">
             <span id="trace-toggle-text">View 4 Agent Steps</span>
             <i id="trace-toggle-icon" class="fa-solid fa-chevron-down text-[10px]"></i>
           </button>
@@ -375,7 +384,7 @@
 
         <!-- Loading State -->
         <div id="loading-spinner" class="hidden py-16 text-center space-y-3">
-          <i class="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-600"></i>
+          <i class="fa-solid fa-circle-notch fa-spin text-3xl text-sky-500"></i>
           <p style="color: var(--text-muted);" class="text-xs font-medium">Orchestrating dual-signal recommendations via LangGraph agent...</p>
         </div>
 
@@ -397,8 +406,8 @@
             <p style="color: var(--text-muted);" class="text-xs mt-0.5">Visualizing 1-hop citations connecting the active seed paper to neighboring research nodes.</p>
           </div>
           <div class="flex items-center gap-3 text-xs font-medium">
-            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block"></span> Seed Paper</span>
-            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block"></span> Citation Neighbor</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block"></span> Seed Paper</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block"></span> Citation Neighbor</span>
           </div>
         </div>
         <div id="graph-canvas-container" style="border-color: var(--card-border); background: var(--pill-bg);" class="w-full h-[520px] rounded-xl border relative overflow-hidden flex items-center justify-center">
@@ -413,7 +422,7 @@
     <div id="view-eval" class="hidden space-y-6">
       
       <!-- Overview Banner -->
-      <div class="glass-panel rounded-2xl p-6 border-l-4 border-indigo-500">
+      <div class="glass-panel rounded-2xl p-6 border-l-4 border-sky-400">
         <div class="flex justify-between items-start">
           <div>
             <h2 class="text-lg font-bold">Leakage-Safe Held-Out Evaluation Protocol</h2>
@@ -423,30 +432,30 @@
               Held-out test edges were completely removed from the message-passing adjacency graph during GraphSAGE evaluation.
             </p>
           </div>
-          <button onclick="fetchEvaluation()" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="px-3 py-1.5 border text-xs font-medium rounded-lg hover:border-indigo-400 transition flex items-center gap-1.5 shrink-0">
+          <button onclick="fetchEvaluation()" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="px-3 py-1.5 border text-xs font-medium rounded-lg hover:border-sky-400 transition flex items-center gap-1.5 shrink-0">
             <i class="fa-solid fa-arrows-rotate text-[11px]"></i> Refresh
           </button>
         </div>
       </div>
 
-      <!-- Key Stat Cards -->
+      <!-- Key Stat Cards (Light-Blue Neon Accents) -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-        <div class="glass-card rounded-xl p-4 border-t-2 border-indigo-500">
+        <div class="glass-card rounded-xl p-4 border-t-2 border-sky-400">
           <span style="color: var(--text-muted);" class="text-[11px] uppercase font-semibold">GraphSAGE ROC-AUC</span>
           <div class="text-2xl font-black mt-1">73.79%</div>
-          <span class="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-check"></i> Held-out edges</span>
+          <span class="text-[10px] text-cyan-600 dark:text-cyan-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-check"></i> Held-out edges</span>
         </div>
-        <div class="glass-card rounded-xl p-4 border-t-2 border-purple-500">
+        <div class="glass-card rounded-xl p-4 border-t-2 border-cyan-400">
           <span style="color: var(--text-muted);" class="text-[11px] uppercase font-semibold">Hybrid MRR</span>
           <div class="text-2xl font-black mt-1">0.4672</div>
-          <span class="text-[10px] text-indigo-600 dark:text-indigo-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-arrow-trend-up"></i> +100.2% vs Semantics</span>
+          <span class="text-[10px] text-sky-600 dark:text-sky-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-arrow-trend-up"></i> +100.2% vs Semantics</span>
         </div>
-        <div class="glass-card rounded-xl p-4 border-t-2 border-emerald-500">
+        <div class="glass-card rounded-xl p-4 border-t-2 border-blue-400">
           <span style="color: var(--text-muted);" class="text-[11px] uppercase font-semibold">Hybrid Hits@5</span>
           <div class="text-2xl font-black mt-1">53.30%</div>
-          <span class="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-arrow-trend-up"></i> vs 29.40% Semantic</span>
+          <span class="text-[10px] text-cyan-600 dark:text-cyan-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-arrow-trend-up"></i> vs 29.40% Semantic</span>
         </div>
-        <div class="glass-card rounded-xl p-4 border-t-2 border-sky-500">
+        <div class="glass-card rounded-xl p-4 border-t-2 border-teal-400">
           <span style="color: var(--text-muted);" class="text-[11px] uppercase font-semibold">Hybrid Hits@20</span>
           <div class="text-2xl font-black mt-1">71.00%</div>
           <span class="text-[10px] text-sky-600 dark:text-sky-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-check-double"></i> 1-in-100 ranking</span>
@@ -457,7 +466,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div class="glass-card rounded-xl p-5">
           <h3 class="text-sm font-bold mb-3 flex items-center gap-2">
-            <i class="fa-solid fa-table text-indigo-500"></i> Comparative Ranking Benchmark
+            <i class="fa-solid fa-table text-sky-500"></i> Comparative Ranking Benchmark
           </h3>
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs">
@@ -479,7 +488,7 @@
 
         <div class="glass-card rounded-xl p-5">
           <h3 class="text-sm font-bold mb-3 flex items-center gap-2">
-            <i class="fa-solid fa-chart-column text-purple-500"></i> Hits@K Performance Comparison
+            <i class="fa-solid fa-chart-column text-cyan-500"></i> Hits@K Performance Comparison
           </h3>
           <div class="h-60">
             <canvas id="evalChart"></canvas>
@@ -503,13 +512,13 @@
     <div class="glass-panel max-w-xl w-full rounded-2xl p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
       <div style="border-color: var(--card-border);" class="flex items-center justify-between border-b pb-3">
         <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-xl bg-indigo-600/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-sm border border-indigo-500/20">
+          <div class="w-8 h-8 rounded-xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold text-sm border border-sky-400/30">
             <i class="fa-solid fa-bookmark"></i>
           </div>
           <div>
             <h3 class="text-base font-bold flex items-center gap-2">
               <span>My Research Library</span>
-              <span id="reading-list-count-badge" class="text-[11px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20 px-2 py-0.2 rounded-full">0 papers</span>
+              <span id="reading-list-count-badge" class="text-[11px] bg-sky-500/10 text-sky-600 dark:text-sky-300 border border-sky-400/30 px-2 py-0.2 rounded-full">0 papers</span>
             </h3>
             <p style="color: var(--text-muted);" class="text-[11px]">Personal collection used to generate user profile centroids</p>
           </div>
@@ -527,7 +536,7 @@
         <button onclick="clearReadingList()" class="px-3 py-1.5 rounded-lg text-xs font-medium text-rose-500 hover:bg-rose-500/10 border border-rose-500/30 transition">
           <i class="fa-regular fa-trash-can mr-1"></i> Clear All
         </button>
-        <button id="btn-personalize" onclick="personalizeFromReadingList()" class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold rounded-lg shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition">
+        <button id="btn-personalize" onclick="personalizeFromReadingList()" class="px-4 py-2 gradient-btn text-white text-xs font-semibold rounded-lg shadow-md flex items-center gap-1.5 transition">
           <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
           <span>Personalize Recommendations</span>
         </button>
@@ -535,9 +544,9 @@
     </div>
   </div>
 
-  <!-- Toast Notification -->
+  <!-- Toast Notification in Sky-Blue -->
   <div id="toast" style="background: var(--card-bg); border-color: var(--card-border); color: var(--text-main);" class="hidden fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded-xl border shadow-2xl text-xs flex items-center gap-2 backdrop-blur-xl transition-all duration-300">
-    <i class="fa-solid fa-circle-check text-emerald-500"></i>
+    <i class="fa-solid fa-circle-check text-cyan-500"></i>
     <span id="toast-message">Saved to library</span>
   </div>
 
@@ -558,7 +567,7 @@
     // ==========================================
     function initTheme() {
       const savedTheme = localStorage.getItem('scholar_theme');
-      // Default to "white normal" (light mode) as requested by user
+      // Default to "white normal" (light mode)
       if (savedTheme === 'dark') {
         document.body.classList.add('dark');
         updateThemeIcon(true);
@@ -580,7 +589,7 @@
       if (isDark) {
         icon.className = 'fa-solid fa-sun text-amber-400 text-sm';
       } else {
-        icon.className = 'fa-solid fa-moon text-indigo-600 text-sm';
+        icon.className = 'fa-solid fa-moon text-sky-500 text-sm';
       }
     }
 
@@ -596,10 +605,10 @@
     function switchTab(tabId) {
       ['recs', 'graph', 'eval'].forEach(t => {
         document.getElementById(`view-${t}`).classList.add('hidden');
-        document.getElementById(`tab-${t}`).className = 'px-3.5 py-1.5 text-xs font-semibold rounded-lg text-slate-500 dark:text-slate-400 hover:text-indigo-500 flex items-center gap-1.5 transition';
+        document.getElementById(`tab-${t}`).className = 'px-3.5 py-1.5 text-xs font-semibold rounded-lg text-slate-500 dark:text-sky-300 hover:text-sky-500 flex items-center gap-1.5 transition';
       });
       document.getElementById(`view-${tabId}`).classList.remove('hidden');
-      document.getElementById(`tab-${tabId}`).className = 'px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white shadow-sm flex items-center gap-1.5 transition';
+      document.getElementById(`tab-${tabId}`).className = 'px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-sky-500 text-white shadow-md shadow-sky-500/30 flex items-center gap-1.5 transition';
 
       if (tabId === 'eval') {
         fetchEvaluation();
@@ -614,12 +623,12 @@
       const btnSeed = document.getElementById('btn-mode-seed');
       const btnQuery = document.getElementById('btn-mode-query');
       if (mode === 'seed') {
-        btnSeed.className = 'px-3.5 py-1.5 font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5';
-        btnQuery.className = 'px-3.5 py-1.5 font-semibold rounded-lg text-slate-500 dark:text-slate-400 hover:text-indigo-500 transition flex items-center gap-1.5';
+        btnSeed.className = 'px-3.5 py-1.5 font-semibold rounded-lg bg-sky-500 text-white shadow-sm shadow-sky-500/30 transition flex items-center gap-1.5';
+        btnQuery.className = 'px-3.5 py-1.5 font-semibold rounded-lg text-slate-500 dark:text-sky-300 hover:text-sky-500 transition flex items-center gap-1.5';
         document.getElementById('search-input').placeholder = "Enter paper title to select seed paper...";
       } else {
-        btnQuery.className = 'px-3.5 py-1.5 font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5';
-        btnSeed.className = 'px-3.5 py-1.5 font-semibold rounded-lg text-slate-500 dark:text-slate-400 hover:text-indigo-500 transition flex items-center gap-1.5';
+        btnQuery.className = 'px-3.5 py-1.5 font-semibold rounded-lg bg-sky-500 text-white shadow-sm shadow-sky-500/30 transition flex items-center gap-1.5';
+        btnSeed.className = 'px-3.5 py-1.5 font-semibold rounded-lg text-slate-500 dark:text-sky-300 hover:text-sky-500 transition flex items-center gap-1.5';
         document.getElementById('search-input').placeholder = "Enter your research topic or query...";
         clearSeedPaper();
       }
@@ -707,13 +716,13 @@
         return;
       }
       drop.innerHTML = papers.map(p => `
-        <div onclick="selectAutocomplete('${p.paperId}', '${escapeHtml(p.title)}')" style="border-color: var(--card-border);" class="px-3.5 py-2.5 hover:bg-indigo-500/10 cursor-pointer border-b last:border-0 transition">
+        <div onclick="selectAutocomplete('${p.paperId}', '${escapeHtml(p.title)}')" style="border-color: var(--card-border);" class="px-3.5 py-2.5 hover:bg-sky-500/10 cursor-pointer border-b last:border-0 transition">
           <div class="text-xs font-semibold truncate">${p.title}</div>
           <div style="color: var(--text-muted);" class="text-[10px] flex items-center gap-2.5 mt-0.5">
             <span>Year: ${p.year || 'N/A'}</span>
             <span>&bull;</span>
             <span>${p.citationCount.toLocaleString()} citations</span>
-            ${p.in_graph ? '<span class="text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-500/10 px-1.5 py-0.2 rounded">In Graph</span>' : '<span class="text-amber-600 dark:text-amber-400 font-medium bg-amber-500/10 px-1.5 py-0.2 rounded">Content Only</span>'}
+            ${p.in_graph ? '<span class="text-cyan-600 dark:text-cyan-400 font-medium bg-cyan-500/10 px-1.5 py-0.2 rounded">In Graph</span>' : '<span class="text-sky-600 dark:text-sky-400 font-medium bg-sky-500/10 px-1.5 py-0.2 rounded">Content Only</span>'}
           </div>
         </div>
       `).join('');
@@ -753,7 +762,7 @@
         if (!readingList.length) {
           listContainer.innerHTML = `
             <div class="py-12 text-center text-slate-400 space-y-2">
-              <i class="fa-regular fa-bookmark text-2xl"></i>
+              <i class="fa-regular fa-bookmark text-2xl text-sky-400"></i>
               <p class="text-xs">Your library is empty.</p>
               <p style="color: var(--text-muted);" class="text-[11px]">Click the bookmark icon on any paper card to save it to your library.</p>
             </div>
@@ -761,9 +770,9 @@
           if (btnPersonalize) btnPersonalize.disabled = true;
         } else {
           listContainer.innerHTML = readingList.map((item, idx) => `
-            <div style="background: var(--pill-bg); border-color: var(--card-border);" class="p-2.5 rounded-xl border flex items-center justify-between gap-2.5 hover:border-indigo-400 transition">
+            <div style="background: var(--pill-bg); border-color: var(--card-border);" class="p-2.5 rounded-xl border flex items-center justify-between gap-2.5 hover:border-sky-400 transition">
               <div class="flex items-start gap-2 min-w-0">
-                <span class="w-5 h-5 rounded bg-indigo-600/20 text-indigo-500 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">${idx + 1}</span>
+                <span class="w-5 h-5 rounded bg-sky-500/20 text-sky-500 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">${idx + 1}</span>
                 <div class="min-w-0">
                   <h5 class="text-xs font-semibold truncate">${item.title}</h5>
                   <div style="color: var(--text-muted);" class="text-[10px] flex items-center gap-2 mt-0.5">
@@ -934,7 +943,7 @@
         spinner.classList.add('hidden');
         btn.disabled = false;
         container.innerHTML = `
-          <div class="p-5 text-center text-amber-600 dark:text-amber-300 bg-amber-500/10 rounded-xl border border-amber-500/20 space-y-1.5">
+          <div class="p-5 text-center text-sky-600 dark:text-sky-300 bg-sky-500/10 rounded-xl border border-sky-500/20 space-y-1.5">
             <div class="font-semibold text-sm flex items-center justify-center gap-1.5">
               <i class="fa-solid fa-triangle-exclamation"></i> Connection Notice
             </div>
@@ -942,7 +951,7 @@
               ${escapeHtml(err.message || 'Unable to connect to recommendation backend.')}
             </p>
             <div style="color: var(--text-muted);" class="text-[11px]">Ensure the backend process is running:</div>
-            <div style="background: var(--pill-bg); border-color: var(--card-border);" class="code-font px-3 py-1 rounded text-indigo-500 inline-block text-[11px] border">
+            <div style="background: var(--pill-bg); border-color: var(--card-border);" class="code-font px-3 py-1 rounded text-sky-500 inline-block text-[11px] border">
               .\\myenv\\Scripts\\python.exe -m uvicorn backend.app:app --port 8000 --reload
             </div>
           </div>
@@ -955,7 +964,7 @@
       document.getElementById('seed-title').innerText = meta.title || "Untitled";
       document.getElementById('seed-meta').innerText = `Year: ${meta.year || 'N/A'} • ID: ${meta.paperId ? meta.paperId.slice(0, 12) + '...' : ''}`;
       document.getElementById('seed-abstract').innerText = meta.abstract || "No abstract available in dataset.";
-      document.getElementById('seed-citations').innerHTML = `<i class="fa-solid fa-quote-right text-indigo-500 mr-1"></i> ${Number(meta.citationCount || 0).toLocaleString()} citations`;
+      document.getElementById('seed-citations').innerHTML = `<i class="fa-solid fa-quote-right text-sky-500 mr-1"></i> ${Number(meta.citationCount || 0).toLocaleString()} citations`;
       banner.classList.remove('hidden');
     }
 
@@ -984,8 +993,8 @@
         stepsList.innerHTML = orchestration.workflow_trace.map(st => `
           <div style="background: var(--pill-bg); border-color: var(--card-border);" class="p-2.5 rounded-lg border space-y-1">
             <div class="flex items-center justify-between">
-              <span class="text-[9px] font-bold text-indigo-500 uppercase tracking-wider">${st.stage}</span>
-              <span class="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">${st.duration_ms}ms</span>
+              <span class="text-[9px] font-bold text-sky-500 uppercase tracking-wider">${st.stage}</span>
+              <span class="text-[9px] font-mono text-cyan-600 dark:text-cyan-400 font-semibold">${st.duration_ms}ms</span>
             </div>
             <div class="text-[11px] font-semibold leading-tight">${st.action}</div>
             <p style="color: var(--text-muted);" class="text-[10px] leading-tight">${st.detail}</p>
@@ -1012,11 +1021,11 @@
           <div class="glass-card rounded-2xl p-4 transition space-y-3">
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-start gap-3 min-w-0">
-                <span class="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0 border border-indigo-500/20 mt-0.5">
+                <span class="w-7 h-7 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 font-bold text-xs flex items-center justify-center shrink-0 border border-sky-400/25 mt-0.5">
                   #${r.rank}
                 </span>
                 <div class="min-w-0">
-                  <h3 class="text-sm font-bold hover:text-indigo-500 cursor-pointer transition leading-snug" onclick="selectAutocomplete('${r.paperId}', '${escapeHtml(r.title)}')">
+                  <h3 class="text-sm font-bold hover:text-sky-500 cursor-pointer transition leading-snug" onclick="selectAutocomplete('${r.paperId}', '${escapeHtml(r.title)}')">
                     ${r.title}
                   </h3>
                   <div style="color: var(--text-muted);" class="flex items-center gap-2.5 text-[11px] mt-1 flex-wrap">
@@ -1024,8 +1033,8 @@
                     <span>&bull;</span>
                     <span><i class="fa-solid fa-quote-right mr-1 opacity-70"></i>${r.citationCount.toLocaleString()} citations</span>
                     <span>&bull;</span>
-                    ${r.fallback_applied ? '<span class="text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20 text-[10px] font-medium">Content Fallback</span>' : '<span class="text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20 text-[10px] font-medium">Citation Topology</span>'}
-                    <a href="https://scholar.google.com/scholar?q=${encodeURIComponent(r.title)}" target="_blank" rel="noopener noreferrer" class="opacity-60 hover:opacity-100 hover:text-indigo-500 transition ml-1" title="Search on Google Scholar">
+                    ${r.fallback_applied ? '<span class="text-sky-600 dark:text-sky-400 bg-sky-500/10 px-1.5 py-0.2 rounded border border-sky-400/20 text-[10px] font-medium">Content Fallback</span>' : '<span class="text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 px-1.5 py-0.2 rounded border border-cyan-400/20 text-[10px] font-medium">Citation Topology</span>'}
+                    <a href="https://scholar.google.com/scholar?q=${encodeURIComponent(r.title)}" target="_blank" rel="noopener noreferrer" class="opacity-60 hover:opacity-100 hover:text-sky-500 transition ml-1" title="Search on Google Scholar">
                       <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
                     </a>
                   </div>
@@ -1036,13 +1045,13 @@
               <div class="flex items-center gap-2.5 shrink-0">
                 <button onclick="toggleBookmark('${r.paperId}', '${escapeHtml(r.title)}', ${r.year || 0}, ${r.citationCount || 0}, event)" 
                         style="background: var(--pill-bg); border-color: var(--card-border);"
-                        class="w-8 h-8 rounded-xl border flex items-center justify-center transition ${isSaved ? '!bg-indigo-600 !text-white !border-indigo-600 shadow-md shadow-indigo-600/30' : 'hover:border-indigo-400'}" 
+                        class="w-8 h-8 rounded-xl border flex items-center justify-center transition ${isSaved ? '!bg-sky-500 !text-white !border-sky-400 shadow-md shadow-sky-500/40' : 'hover:border-sky-400'}" 
                         title="${isSaved ? 'Remove from Library' : 'Save to Library'}">
-                  <i class="fa-${isSaved ? 'solid' : 'regular'} fa-bookmark text-xs ${isSaved ? 'text-white' : 'text-indigo-500'}"></i>
+                  <i class="fa-${isSaved ? 'solid' : 'regular'} fa-bookmark text-xs ${isSaved ? 'text-white' : 'text-sky-500'}"></i>
                 </button>
 
                 <div class="text-right">
-                  <div class="text-xl font-black text-indigo-600 dark:text-indigo-400">${hybridPct}%</div>
+                  <div class="text-xl font-black text-sky-500 dark:text-sky-400">${hybridPct}%</div>
                   <div style="color: var(--text-muted);" class="text-[9px] font-bold uppercase tracking-wider">Match</div>
                 </div>
               </div>
@@ -1054,7 +1063,7 @@
                 ${r.abstract || 'No abstract text available in catalog.'}
               </p>
               ${r.abstract && r.abstract.length > 180 ? `
-                <button onclick="toggleCardAbstract('${r.paperId}')" id="btn-abs-${r.paperId}" class="text-[11px] text-indigo-500 hover:text-indigo-600 font-semibold mt-1 inline-block transition">
+                <button onclick="toggleCardAbstract('${r.paperId}')" id="btn-abs-${r.paperId}" class="text-[11px] text-sky-500 hover:text-sky-600 font-semibold mt-1 inline-block transition">
                   Read more
                 </button>
               ` : ''}
@@ -1064,17 +1073,17 @@
             <div style="border-color: var(--card-border);" class="pt-2.5 border-t flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
               <div class="flex items-center gap-4 text-[11px]">
                 <div class="flex items-center gap-1.5">
-                  <span class="text-indigo-600 dark:text-indigo-400 font-semibold">Semantics:</span>
+                  <span class="text-sky-600 dark:text-sky-400 font-semibold">Semantics:</span>
                   <span class="font-bold">${semPct}%</span>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  <span class="text-purple-600 dark:text-purple-400 font-semibold">Citation Graph:</span>
+                  <span class="text-cyan-600 dark:text-cyan-400 font-semibold">Citation Graph:</span>
                   <span class="font-bold">${graphPct}%</span>
                 </div>
               </div>
 
               <div style="background: var(--pill-bg); border-color: var(--card-border);" class="text-[11px] px-2.5 py-1 rounded-lg border flex items-center gap-1.5">
-                <i class="fa-solid fa-lightbulb text-amber-500 text-[10px]"></i>
+                <i class="fa-solid fa-lightbulb text-cyan-500 text-[10px]"></i>
                 <span style="color: var(--text-muted);">${r.explanation}</span>
               </div>
             </div>
@@ -1135,7 +1144,7 @@
         .selectAll("line")
         .data(graphData.links)
         .join("line")
-        .attr("stroke", "rgba(99, 102, 241, 0.35)")
+        .attr("stroke", "rgba(56, 189, 248, 0.4)")
         .attr("stroke-width", 1.5);
 
       const node = svg.append("g")
@@ -1150,7 +1159,7 @@
 
       node.append("circle")
         .attr("r", d => d.group === 'seed' ? 12 : 8)
-        .attr("fill", d => d.group === 'seed' ? '#6366f1' : '#a855f7')
+        .attr("fill", d => d.group === 'seed' ? '#0ea5e9' : '#38bdf8')
         .attr("stroke", "#ffffff")
         .attr("stroke-width", 1.5);
 
@@ -1158,7 +1167,7 @@
         .text(d => d.label)
         .attr("x", 14)
         .attr("y", 4)
-        .attr("fill", document.body.classList.contains('dark') ? "#cbd5e1" : "#1e293b")
+        .attr("fill", document.body.classList.contains('dark') ? "#e0f2fe" : "#0c1e36")
         .attr("font-size", "10px")
         .attr("font-family", "Inter, sans-serif");
 
@@ -1185,9 +1194,9 @@
         
         const tbody = document.getElementById('eval-table-body');
         tbody.innerHTML = Object.entries(ranking).map(([method, metrics]) => `
-          <tr class="hover:bg-indigo-500/5 transition">
+          <tr class="hover:bg-sky-500/10 transition">
             <td class="px-3 py-2 font-medium">${method}</td>
-            <td class="px-3 py-2 text-right font-mono text-indigo-600 dark:text-indigo-400 font-bold">${metrics.MRR.toFixed(4)}</td>
+            <td class="px-3 py-2 text-right font-mono text-sky-600 dark:text-sky-400 font-bold">${metrics.MRR.toFixed(4)}</td>
             <td style="color: var(--text-muted);" class="px-3 py-2 text-right font-mono">${metrics["Hits@5"]}%</td>
             <td style="color: var(--text-muted);" class="px-3 py-2 text-right font-mono">${metrics["Hits@10"]}%</td>
             <td style="color: var(--text-muted);" class="px-3 py-2 text-right font-mono">${metrics["Hits@20"]}%</td>
@@ -1210,9 +1219,9 @@
 
       const datasets = methods.map((m, idx) => {
         const colors = [
-          'rgba(99, 102, 241, 0.85)',
-          'rgba(168, 85, 247, 0.85)',
-          'rgba(16, 185, 129, 0.85)'
+          'rgba(14, 165, 233, 0.85)',
+          'rgba(56, 189, 248, 0.85)',
+          'rgba(6, 182, 212, 0.85)'
         ];
         return {
           label: m,
@@ -1229,17 +1238,17 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { labels: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 } } }
+            legend: { labels: { color: isDark ? '#bae6fd' : '#526e8c', font: { size: 10 } } }
           },
           scales: {
             y: {
               beginAtZero: true,
               max: 100,
-              ticks: { color: isDark ? '#64748b' : '#94a3b8', callback: val => val + '%' },
-              grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }
+              ticks: { color: isDark ? '#7dd3fc' : '#526e8c', callback: val => val + '%' },
+              grid: { color: isDark ? 'rgba(56,189,248,0.08)' : 'rgba(14,165,233,0.06)' }
             },
             x: {
-              ticks: { color: isDark ? '#94a3b8' : '#64748b' },
+              ticks: { color: isDark ? '#bae6fd' : '#526e8c' },
               grid: { display: false }
             }
           }

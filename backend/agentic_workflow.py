@@ -44,7 +44,8 @@ class AgentRecommendationState(TypedDict):
 class LangGraphRecommenderAgent:
     def __init__(self, recommender_instance):
         self.recommender = recommender_instance
-        self.gemini_model_name = "gemini-2.5-flash"
+        # Default to gemini-3.5-flash-lite (fastest, most reliable, ~350 tokens/sec)
+        self.gemini_model_name = os.getenv("GEMINI_MODEL") or "gemini-3.5-flash-lite"
         self.gemini_client = None
         self.langchain_llm = None
         self._init_gemini()
@@ -99,29 +100,34 @@ class LangGraphRecommenderAgent:
                 print("LangChain Google GenAI wrapper notice:", e)
 
     def _call_gemini_advisor(self, prompt: str) -> Optional[str]:
-        """Calls Google Gemini model via LangChain with LangSmith tracing and fallback."""
+        """Calls Google Gemini model via LangChain with LangSmith tracing and multi-tier fallback."""
         if not self.langchain_llm and not self.gemini_client:
             self._init_gemini()
 
-        # 1. Try LangChain LLM (enables LangSmith trace recording)
+        # 1. Try primary LangChain LLM (enables LangSmith trace recording)
         if self.langchain_llm:
             try:
                 res = self.langchain_llm.invoke(prompt)
                 if res and res.content:
+                    if isinstance(res.content, list):
+                        text_parts = [c.get("text", "") if isinstance(c, dict) else str(c) for c in res.content]
+                        return " ".join(tp for tp in text_parts if tp).strip()
                     return str(res.content).strip()
             except Exception as e:
-                print(f"LangChain Gemini invocation notice: {e}")
+                print(f"LangChain Gemini ({self.gemini_model_name}) notice: {e}")
 
-        # 2. Direct Google GenAI fallback
+        # 2. Try direct Google GenAI with primary model
         if self.gemini_client:
-            try:
-                response = self.gemini_client.models.generate_content(
-                    model=self.gemini_model_name,
-                    contents=prompt
-                )
-                return response.text.strip() if response and response.text else None
-            except Exception as e:
-                print(f"Direct Gemini API notice: {e}")
+            for fallback_model in [self.gemini_model_name, "gemini-2.5-flash", "gemini-3.8-flash"]:
+                try:
+                    response = self.gemini_client.models.generate_content(
+                        model=fallback_model,
+                        contents=prompt
+                    )
+                    if response and response.text:
+                        return response.text.strip()
+                except Exception as e:
+                    print(f"Gemini fallback ({fallback_model}) notice: {e}")
 
         return None
 
@@ -417,7 +423,7 @@ class LangGraphRecommenderAgent:
             )
             gemini_synthesis = self._call_gemini_advisor(prompt)
 
-        agent_label = f"ExplainabilityAgentNode (Google Gemini 2.5 Flash)" if gemini_synthesis else "ExplainabilityAgentNode (SciBERT Rationale)"
+        agent_label = f"ExplainabilityAgentNode (Google Gemini: {self.gemini_model_name})" if gemini_synthesis else "ExplainabilityAgentNode (SciBERT Rationale)"
         action_label = "Generated Gemini LLM Literature Synthesis & Rationales" if gemini_synthesis else "Generated natural language rationales"
 
         trace.append({
