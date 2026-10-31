@@ -80,7 +80,7 @@ def health_check():
 
 @app.get("/api/search")
 def search_papers(q: str = Query(..., min_length=2), limit: int = 8):
-    """Smart autocomplete / paper selection endpoint with token-level relevance ranking."""
+    """Smart fast autocomplete / paper selection endpoint with early stopping."""
     if not recommender:
         raise HTTPException(status_code=503, detail="Recommender not initialized")
     
@@ -90,16 +90,18 @@ def search_papers(q: str = Query(..., min_length=2), limit: int = 8):
     scored_matches = []
     
     for title, pid in recommender.titles_lookup.items():
-        meta = recommender.metadata.get(pid, {})
         # Exact contiguous substring gets top priority
         if q_lower in title:
-            # Prefer shorter titles that closely match query length
+            meta = recommender.metadata.get(pid, {})
             score = 100.0 - (len(title) - len(q_lower)) * 0.05
             scored_matches.append((score, pid, meta))
-        elif q_tokens:
-            # Token overlap score
+            if len(scored_matches) >= 30:
+                break
+        elif q_tokens and len(scored_matches) < 20:
+            # Token overlap score fallback
             hits = sum(1 for tok in q_tokens if tok in title)
             if hits >= min(2, len(q_tokens)):
+                meta = recommender.metadata.get(pid, {})
                 score = (hits / len(q_tokens)) * 50.0
                 scored_matches.append((score, pid, meta))
 
@@ -240,6 +242,48 @@ def get_evaluation_metrics():
         "ranking_benchmark": eval_data,
         "graphsage_link_prediction": graphsage_data
     }
+
+
+@app.get("/api/download-documentation")
+def download_documentation():
+    """Download project technical documentation PDF"""
+    pdf_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ScholarGraph_Project_Documentation.pdf")
+    if os.path.exists(pdf_path):
+        return FileResponse(
+            pdf_path,
+            media_type="application/pdf",
+            filename="ScholarGraph_Project_Documentation.pdf"
+        )
+    raise HTTPException(status_code=404, detail="Documentation PDF not found")
+
+
+@app.post("/api/export-recommendations-pdf")
+def export_recommendations_pdf_endpoint(payload: dict):
+    """Dynamically generates and returns a PDF of the AI briefing and recommended papers."""
+    try:
+        from print_recommendations_pdf import generate_recommendations_pdf
+        out_pdf = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ScholarGraph_AI_Paper_Recommendations.pdf")
+        generate_recommendations_pdf(payload, out_pdf)
+        return FileResponse(
+            out_pdf,
+            media_type="application/pdf",
+            filename="ScholarGraph_AI_Paper_Recommendations.pdf"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/download-recommendations-pdf")
+def download_recommendations_pdf():
+    """Download the latest AI recommendations PDF"""
+    pdf_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ScholarGraph_AI_Paper_Recommendations.pdf")
+    if os.path.exists(pdf_path):
+        return FileResponse(
+            pdf_path,
+            media_type="application/pdf",
+            filename="ScholarGraph_AI_Paper_Recommendations.pdf"
+        )
+    raise HTTPException(status_code=404, detail="Recommendations PDF not generated yet")
 
 
 @app.get("/api/graph/subgraph/{paper_id}")
