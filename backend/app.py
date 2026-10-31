@@ -244,48 +244,6 @@ def get_evaluation_metrics():
     }
 
 
-@app.get("/api/download-documentation")
-def download_documentation():
-    """Download project technical documentation PDF"""
-    pdf_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ScholarGraph_Project_Documentation.pdf")
-    if os.path.exists(pdf_path):
-        return FileResponse(
-            pdf_path,
-            media_type="application/pdf",
-            filename="ScholarGraph_Project_Documentation.pdf"
-        )
-    raise HTTPException(status_code=404, detail="Documentation PDF not found")
-
-
-@app.post("/api/export-recommendations-pdf")
-def export_recommendations_pdf_endpoint(payload: dict):
-    """Dynamically generates and returns a PDF of the AI briefing and recommended papers."""
-    try:
-        from print_recommendations_pdf import generate_recommendations_pdf
-        out_pdf = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ScholarGraph_AI_Paper_Recommendations.pdf")
-        generate_recommendations_pdf(payload, out_pdf)
-        return FileResponse(
-            out_pdf,
-            media_type="application/pdf",
-            filename="ScholarGraph_AI_Paper_Recommendations.pdf"
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/download-recommendations-pdf")
-def download_recommendations_pdf():
-    """Download the latest AI recommendations PDF"""
-    pdf_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ScholarGraph_AI_Paper_Recommendations.pdf")
-    if os.path.exists(pdf_path):
-        return FileResponse(
-            pdf_path,
-            media_type="application/pdf",
-            filename="ScholarGraph_AI_Paper_Recommendations.pdf"
-        )
-    raise HTTPException(status_code=404, detail="Recommendations PDF not generated yet")
-
-
 @app.get("/api/graph/subgraph/{paper_id}")
 def get_citation_subgraph(paper_id: str, max_neighbors: int = 15):
     """Returns 1-hop ego network for citation visualization"""

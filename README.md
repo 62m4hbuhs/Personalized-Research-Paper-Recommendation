@@ -74,12 +74,8 @@ MajorProject/
 │   ├── test_residual_sage.py               # Residual connection ablation experiments
 │   ├── test_graphsage_gpu.py               # GPU inference speed benchmarking
 │   └── diagnose_sim.py                     # Vector similarity distributions
-├── ScholarGraph_AI_Paper_Recommendations.pdf # Generated AI Literature Briefing PDF
-├── ScholarGraph_Project_Documentation.pdf   # Complete Project Architecture & Tech Report
-├── PROJECT_REPORT_AND_ARCHITECTURE.md      # Comprehensive Academic Technical Report
-├── generate_pdf_report.py                  # PDF documentation generator (ReportLab)
-├── print_recommendations_pdf.py            # PDF recommendations exporter (ReportLab)
-└── requirements.txt                        # Python dependencies
+├── requirements.txt                        # Python dependencies
+└── run_demo.py                             # Command-line evaluation & demo script
 ```
 
 ---
@@ -137,20 +133,10 @@ Open your browser at **[http://127.0.0.1:8000](http://127.0.0.1:8000)**.
 | `GET` | `/api/graph/subgraph/{paper_id}` | 1-hop ego citation network nodes and links for D3 visualization |
 | `POST` | `/api/user/reading-list/recommend` | Personalized recommendations based on reading list centroid |
 | `GET` | `/api/evaluation` | Held-out evaluation metrics (MRR, Hits@K, ROC-AUC) |
-| `GET` | `/api/download-documentation` | Download technical architecture documentation PDF |
-| `GET` | `/api/download-recommendations-pdf` | Download latest AI literature briefing & recommendations PDF |
-| `POST` | `/api/export-recommendations-pdf` | Dynamically generate and export current query recommendations to PDF |
-
----
-
-## Documentation & PDF Reports
-
-- **[Technical Architecture Report (PDF)](ScholarGraph_Project_Documentation.pdf)**: Complete mathematical formulation, component specifications, and leakage-safe evaluation details.
-- **[Sample AI Literature Briefing (PDF)](ScholarGraph_AI_Paper_Recommendations.pdf)**: Full sample export containing Google Gemini 3.5 Flash-Lite literature synthesis and ranked recommendations.
-- **[Full Markdown Report](PROJECT_REPORT_AND_ARCHITECTURE.md)**: Extended academic report with Mermaid system flowcharts and ablation analyses.
 
 ---
 
 ## License
 
 This project is developed for educational and academic research purposes under the MIT License.
+

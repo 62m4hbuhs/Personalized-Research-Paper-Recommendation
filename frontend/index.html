@@ -152,12 +152,6 @@
 
       <!-- Header Actions -->
       <div class="flex items-center gap-2">
-        <!-- Download Documentation PDF Button -->
-        <a href="/api/download-documentation" download="ScholarGraph_Project_Documentation.pdf" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1.5 hover:border-sky-400 transition h-8" title="Download Full Project PDF Documentation">
-          <i class="fa-solid fa-file-pdf text-rose-500 text-[11px]"></i>
-          <span class="hidden sm:inline">PDF Report</span>
-        </a>
-
         <a href="#library-panel" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1.5 hover:border-sky-400 transition h-8">
           <i class="fa-solid fa-bookmark text-sky-500 text-[11px]"></i>
           <span>Library</span>
@@ -345,15 +339,9 @@
             <span>Recommended Papers</span>
             <span id="results-count" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-muted);" class="text-[10px] font-normal border px-2 py-0.2 rounded-full">0 papers</span>
           </h2>
-          <div class="flex items-center gap-2">
-            <button onclick="downloadCurrentRecommendationsPDF()" style="background: var(--pill-bg); border-color: var(--pill-border); color: var(--text-main);" class="px-2.5 py-1 rounded-lg border text-[11px] font-semibold flex items-center gap-1.5 hover:border-sky-400 transition" title="Export current recommendations and AI briefing as PDF">
-              <i class="fa-solid fa-file-pdf text-rose-500 text-[10px]"></i>
-              <span>Export PDF</span>
-            </button>
-            <span style="color: var(--text-muted);" class="text-[10px] hidden sm:inline">
-              Ranked by SciBERT + GraphSAGE
-            </span>
-          </div>
+          <span style="color: var(--text-muted);" class="text-[10px]">
+            Ranked by SciBERT + GraphSAGE Hybrid Score
+          </span>
         </div>
 
         <!-- Loading Spinner -->
@@ -1095,45 +1083,6 @@
     function focusPaperGraph(paperId, title) {
       fetchSubgraph(paperId, title);
       showToast(`Focused: ${title.slice(0, 24)}...`);
-    }
-
-    // Export current recommendations & AI briefing as PDF
-    async function downloadCurrentRecommendationsPDF() {
-      if (!currentRecommendations || !currentRecommendations.length) {
-        showToast("No recommendations loaded to export.");
-        return;
-      }
-      showToast("Generating PDF briefing...");
-
-      try {
-        const payload = {
-          seed_paper: lastSeedPaper,
-          recommendations: currentRecommendations,
-          agentic_orchestration: lastOrchestration,
-          alpha: currentAlpha
-        };
-        const res = await fetch('/api/export-recommendations-pdf', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error("Server returned status " + res.status);
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const safeTitle = (lastSeedPaper && lastSeedPaper.title) ? lastSeedPaper.title.slice(0, 18).replace(/[^a-zA-Z0-9]/g, '_') : 'Recommendations';
-        a.download = `ScholarGraph_${safeTitle}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-        showToast("PDF exported successfully!");
-      } catch (err) {
-        console.error("PDF export error:", err);
-        // Fallback to direct GET endpoint
-        window.location.href = '/api/download-recommendations-pdf';
-      }
     }
 
     // ==========================================

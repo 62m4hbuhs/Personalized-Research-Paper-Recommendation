@@ -7,9 +7,19 @@ __pycache__/
 data/
 *.npy
 *.index
-.obsidian/workspace.json
-obsidian_vault/.obsidian/workspace.json
-# PDF documents
+
+# Ignore PDF documents & generation scripts
 *.pdf
-!ScholarGraph_AI_Paper_Recommendations.pdf
-!ScholarGraph_Project_Documentation.pdf
+generate_pdf_report.py
+print_recommendations_pdf.py
+
+# Ignore personal Obsidian Vault
+obsidian_vault/
+.obsidian/
+
+# Ignore scratch Jupyter Notebooks
+training/
+*.ipynb
+
+# Ignore duplicate markdown report
+PROJECT_REPORT_AND_ARCHITECTURE.md
