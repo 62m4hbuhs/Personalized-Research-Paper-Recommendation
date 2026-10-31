@@ -1,0 +1,34 @@
+# ==============================================================================
+# Personalized Research Paper Recommendation System - Dependencies
+# Dual-Signal SciBERT Semantics + GraphSAGE Topology + LangGraph Agentic AI
+# ==============================================================================
+
+# --- Web Framework & API Server ---
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.7.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+
+# --- Scientific Computing & Vector Search ---
+numpy>=1.24.0
+pandas>=2.0.0
+faiss-cpu>=1.8.0
+scikit-learn>=1.4.0
+scipy>=1.12.0
+networkx>=3.2
+
+# --- Deep Learning & Transformers (SciBERT) ---
+torch>=2.2.0
+transformers>=4.40.0
+
+# --- Graph Neural Networks (GraphSAGE Inductive Learning) ---
+torch-geometric>=2.5.0
+
+# --- Agentic AI Workflow & LLM Orchestration ---
+langgraph>=0.2.0
+langchain>=0.2.0
+langchain-core>=0.2.0
+langchain-google-genai>=1.0.0
+google-genai>=0.1.0
+langsmith>=0.1.0
