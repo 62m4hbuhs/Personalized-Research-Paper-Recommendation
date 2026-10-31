@@ -3,99 +3,116 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ScholarGraph • Hybrid Research Paper Recommendation System</title>
+  <title>ScholarGraph • AI Academic Paper Recommendation System</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-    body { font-family: 'Inter', sans-serif; background-color: #0b0f19; color: #f1f5f9; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: #090d16; color: #f1f5f9; }
     .code-font { font-family: 'JetBrains Mono', monospace; }
-    .glass-card { background: rgba(17, 24, 39, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-    .glass-card-hover:hover { border-color: rgba(99, 102, 241, 0.4); transform: translateY(-2px); transition: all 0.2s ease; }
+    .glass-panel { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.07); }
+    .glass-card { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.06); }
+    .glass-card:hover { border-color: rgba(99, 102, 241, 0.35); transform: translateY(-1px); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
     .gradient-text { background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #38bdf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .gradient-advisor { background: linear-gradient(135deg, rgba(30, 27, 75, 0.7) 0%, rgba(24, 24, 47, 0.6) 100%); border: 1px solid rgba(129, 140, 248, 0.25); }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #090d16; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
 
-  <!-- Top Navigation -->
+  <!-- ========================================== -->
+  <!-- MINIMALIST HEADER                          -->
+  <!-- ========================================== -->
   <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-          <i class="fa-solid fa-diagram-project text-white text-lg"></i>
+    <div class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('recs')">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <i class="fa-solid fa-graduation-cap text-white text-base"></i>
         </div>
         <div>
-          <span class="text-xl font-bold tracking-tight gradient-text">ScholarGraph</span>
-          <span class="text-xs text-slate-400 block -mt-1 font-medium">Semantic + Citation Network Recommender</span>
+          <span class="text-lg font-bold tracking-tight gradient-text">ScholarGraph</span>
+          <span class="text-[11px] text-slate-400 block -mt-1 font-medium">Research Discovery</span>
         </div>
       </div>
 
-      <!-- Navigation Tabs -->
-      <nav class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800">
-        <button id="tab-recs" onclick="switchTab('recs')" class="px-4 py-1.5 text-sm font-medium rounded-lg bg-indigo-600 text-white shadow-sm flex items-center gap-2 transition">
-          <i class="fa-solid fa-compass"></i> Recommendations
+      <!-- Navigation Tabs (Segmented Control) -->
+      <nav class="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+        <button id="tab-recs" onclick="switchTab('recs')" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white shadow-sm flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-compass text-xs"></i> Recommendations
         </button>
-        <button id="tab-graph" onclick="switchTab('graph')" class="px-4 py-1.5 text-sm font-medium rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-2 transition">
-          <i class="fa-solid fa-circle-nodes"></i> Graph View
+        <button id="tab-graph" onclick="switchTab('graph')" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-circle-nodes text-xs"></i> Citation Graph
         </button>
-        <button id="tab-eval" onclick="switchTab('eval')" class="px-4 py-1.5 text-sm font-medium rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-2 transition">
-          <i class="fa-solid fa-chart-line"></i> Benchmark & Metrics
+        <button id="tab-eval" onclick="switchTab('eval')" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-chart-line text-xs"></i> Benchmark
         </button>
       </nav>
 
-      <div class="flex items-center gap-3">
-        <!-- Reading List Access -->
-        <button onclick="toggleReadingListModal()" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-indigo-500/50 text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-2 transition shadow-sm">
-          <i class="fa-solid fa-bookmark text-indigo-400"></i>
-          <span>Reading List</span>
+      <!-- Right Header Actions -->
+      <div class="flex items-center gap-2.5">
+        <!-- Reading List Button -->
+        <button onclick="toggleReadingListModal()" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/50 text-xs font-medium text-slate-300 hover:text-white flex items-center gap-2 transition shadow-sm">
+          <i class="fa-solid fa-bookmark text-indigo-400 text-xs"></i>
+          <span>Library</span>
           <span id="reading-list-badge" class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-indigo-600 text-white">0</span>
         </button>
 
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-          <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-          LangGraph Agent Active
-        </span>
-
-        <span id="gemini-status-badge" class="hidden inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-          <i class="fa-solid fa-wand-magic-sparkles text-cyan-400 text-[11px]"></i>
-          Gemini 2.5 Active
-        </span>
-
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-          GraphSAGE + SciBERT
-        </span>
+        <!-- System Status Pill -->
+        <div class="relative group">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-default">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>AI Ready</span>
+          </span>
+          <!-- Tooltip on hover -->
+          <div class="hidden group-hover:block absolute right-0 top-full mt-2 w-56 p-2.5 bg-slate-900 border border-slate-800 rounded-xl shadow-xl text-[11px] text-slate-300 z-50 space-y-1">
+            <div class="font-bold text-white mb-1">Architecture Active</div>
+            <div class="flex items-center gap-1.5 text-slate-400"><i class="fa-solid fa-check text-emerald-400 text-[10px]"></i> SciBERT 768-d Vectors</div>
+            <div class="flex items-center gap-1.5 text-slate-400"><i class="fa-solid fa-check text-emerald-400 text-[10px]"></i> GraphSAGE 128-d Topology</div>
+            <div class="flex items-center gap-1.5 text-slate-400"><i class="fa-solid fa-check text-emerald-400 text-[10px]"></i> LangGraph StateGraph Agent</div>
+            <div class="flex items-center gap-1.5 text-slate-400"><i class="fa-solid fa-check text-cyan-400 text-[10px]"></i> Google Gemini 2.5 Flash</div>
+          </div>
+        </div>
       </div>
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="max-w-7xl mx-auto px-6 py-8 flex-1 w-full">
+  <!-- ========================================== -->
+  <!-- MAIN CONTAINER                             -->
+  <!-- ========================================== -->
+  <main class="max-w-6xl mx-auto px-5 py-6 flex-1 w-full">
 
     <!-- ========================================== -->
     <!-- TAB 1: RECOMMENDATIONS EXPLORER           -->
     <!-- ========================================== -->
-    <div id="view-recs" class="space-y-8">
+    <div id="view-recs" class="space-y-6">
       
-      <!-- Query / Seed Paper Panel -->
-      <section class="glass-card rounded-2xl p-6 shadow-xl relative overflow-hidden">
-        <div class="absolute -right-20 -top-20 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <!-- Search & Discovery Card -->
+      <section class="glass-panel rounded-2xl p-6 shadow-xl relative overflow-hidden">
+        <div class="absolute -right-16 -top-16 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        <div class="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center mb-6">
+        <!-- Mode Toggle & Title Header -->
+        <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center mb-4">
           <div>
-            <h2 class="text-2xl font-bold text-white tracking-tight">Discover Research Papers</h2>
-            <p class="text-slate-400 text-sm mt-1">Dual-signal search combining deep transformer semantics (SciBERT) and topological citation connectivity (GraphSAGE).</p>
+            <h1 class="text-xl font-bold text-white tracking-tight">Explore Academic Literature</h1>
+            <p class="text-slate-400 text-xs mt-0.5">Dual-signal recommendations fusing text semantics (SciBERT) with citation topology (GraphSAGE).</p>
           </div>
 
-          <!-- Mode Selector -->
-          <div class="flex bg-slate-900 border border-slate-800 rounded-xl p-1">
-            <button id="btn-mode-seed" onclick="setSearchMode('seed')" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition">
-              <i class="fa-solid fa-book-bookmark mr-1"></i> Seed Paper Mode
+          <!-- Clean Mode Toggle -->
+          <div class="flex bg-slate-900/90 border border-slate-800 rounded-xl p-0.5 text-xs">
+            <button id="btn-mode-seed" onclick="setSearchMode('seed')" class="px-3.5 py-1.5 font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5">
+              <i class="fa-solid fa-book-bookmark text-[11px]"></i> Seed Paper
             </button>
-            <button id="btn-mode-query" onclick="setSearchMode('query')" class="px-4 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">
-              <i class="fa-solid fa-magnifying-glass mr-1"></i> Free Topic Query
+            <button id="btn-mode-query" onclick="setSearchMode('query')" class="px-3.5 py-1.5 font-semibold rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+              <i class="fa-solid fa-magnifying-glass text-[11px]"></i> Topic Query
             </button>
           </div>
         </div>
@@ -103,56 +120,65 @@
         <!-- Search Input Bar -->
         <div class="relative">
           <div class="relative flex items-center">
-            <i class="fa-solid fa-search absolute left-4 text-slate-400 text-lg"></i>
+            <i class="fa-solid fa-search absolute left-4 text-slate-400 text-sm"></i>
             <input 
               type="text" 
               id="search-input"
               oninput="handleSearchInput(this.value)"
               onkeydown="if(event.key==='Enter') executeSearch()"
               placeholder="Search by paper title or enter topic keywords..."
-              class="w-full pl-12 pr-36 py-4 bg-slate-900/90 border border-slate-700/80 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-base transition"
+              class="w-full pl-11 pr-32 py-3.5 bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm transition"
               value="How Powerful are Graph Neural Networks?"
             />
+            
+            <!-- Clear Button (if input not empty) -->
+            <button id="btn-clear-search" onclick="clearSearchInput()" class="hidden absolute right-28 text-slate-500 hover:text-slate-300 p-1 rounded-md transition" title="Clear">
+              <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+
+            <!-- Search Button -->
             <button 
               id="btn-recommend"
               onclick="executeSearch()"
-              class="absolute right-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-lg text-sm transition shadow-md shadow-indigo-600/30 flex items-center gap-2">
+              class="absolute right-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-lg text-xs transition shadow-md shadow-indigo-600/30 flex items-center gap-1.5">
               <span>Recommend</span>
-              <i class="fa-solid fa-arrow-right"></i>
+              <i class="fa-solid fa-arrow-right text-[10px]"></i>
             </button>
           </div>
 
           <!-- Autocomplete Dropdown -->
-          <div id="autocomplete-dropdown" class="hidden absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-40 max-h-72 overflow-y-auto"></div>
+          <div id="autocomplete-dropdown" class="hidden absolute left-0 right-0 top-full mt-1.5 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl shadow-2xl z-40 max-h-72 overflow-y-auto"></div>
         </div>
 
-        <!-- Preset Seeds -->
-        <div class="flex items-center gap-2 mt-4 text-xs text-slate-400 flex-wrap">
-          <span class="text-slate-500 font-medium">Popular Seeds:</span>
-          <button onclick="setQueryPreset('A Survey of Graph Neural Networks for Recommender Systems: Challenges, Methods, and Directions')" class="px-2.5 py-1 rounded-md bg-indigo-900/40 hover:bg-indigo-800/60 text-indigo-300 border border-indigo-700/50 transition">GNN Recommender Survey</button>
-          <button onclick="setQueryPreset('How Powerful are Graph Neural Networks?')" class="px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition">How Powerful are GNNs?</button>
-          <button onclick="setQueryPreset('Inductive Representation Learning on Large Graphs')" class="px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition">GraphSAGE</button>
-          <button onclick="setQueryPreset('Semi-Supervised Classification with Graph Convolutional Networks')" class="px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition">GCN (Kipf & Welling)</button>
-          <button onclick="setQueryPreset('inductive representation learning on large dynamic graphs')" class="px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition">Dynamic Graphs Query</button>
+        <!-- Popular Queries / Quick Presets -->
+        <div class="flex items-center gap-1.5 mt-3 text-xs text-slate-400 flex-wrap">
+          <span class="text-slate-500 font-medium text-[11px] mr-1">Popular:</span>
+          <button onclick="setQueryPreset('A Survey of Graph Neural Networks for Recommender Systems: Challenges, Methods, and Directions')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-indigo-300 border border-indigo-500/20 text-[11px] transition">GNN Recommenders Survey</button>
+          <button onclick="setQueryPreset('How Powerful are Graph Neural Networks?')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-[11px] transition">How Powerful are GNNs?</button>
+          <button onclick="setQueryPreset('Inductive Representation Learning on Large Graphs')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-[11px] transition">GraphSAGE</button>
+          <button onclick="setQueryPreset('Semi-Supervised Classification with Graph Convolutional Networks')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-[11px] transition">GCN (Kipf & Welling)</button>
         </div>
 
-        <!-- Dynamic Signal Fusion Slider -->
-        <div class="mt-6 pt-6 border-t border-slate-800/80">
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-2">
-            <div>
-              <span class="text-sm font-semibold text-white flex items-center gap-2">
-                <i class="fa-solid fa-sliders text-indigo-400"></i> Signal Fusion Weight (&alpha; = <span id="alpha-val" class="text-indigo-400 font-bold">0.60</span>)
+        <!-- Clean Signal Fusion Slider & Presets -->
+        <div class="mt-4 pt-4 border-t border-slate-800/60">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-sliders text-indigo-400"></i> Signal Weight (&alpha; = <span id="alpha-val" class="text-indigo-400 font-bold">0.60</span>)
               </span>
-              <span class="text-xs text-slate-400">Controls the relative balance between SciBERT textual content and GraphSAGE citation topology.</span>
+              <span class="text-[11px] text-slate-500 hidden sm:inline">&bull; Balance content vs network</span>
             </div>
-            <div class="flex items-center gap-4 text-xs font-semibold">
-              <span class="text-purple-400 flex items-center gap-1"><i class="fa-solid fa-circle text-[8px]"></i> Citation Topology (<span id="graph-weight-val">40%</span>)</span>
-              <span class="text-indigo-400 flex items-center gap-1"><i class="fa-solid fa-circle text-[8px]"></i> Content Semantics (<span id="sem-weight-val">60%</span>)</span>
+
+            <!-- Quick Preset Buttons -->
+            <div class="flex items-center gap-1 text-[11px]">
+              <button onclick="setAlphaPreset(0.80)" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-indigo-300 border border-slate-800 transition">Content Focus</button>
+              <button onclick="setAlphaPreset(0.60)" class="px-2 py-0.5 rounded bg-indigo-900/40 text-indigo-200 border border-indigo-500/30 transition">Balanced</button>
+              <button onclick="setAlphaPreset(0.20)" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-purple-300 border border-slate-800 transition">Citation Network</button>
             </div>
           </div>
 
-          <div class="flex items-center gap-4">
-            <span class="text-xs text-purple-400 font-medium">Citation Graph Only</span>
+          <div class="flex items-center gap-3">
+            <span class="text-[11px] text-purple-400 font-medium shrink-0">Citation Graph</span>
             <input 
               type="range" 
               id="alpha-slider" 
@@ -161,80 +187,92 @@
               step="0.05" 
               value="0.60" 
               oninput="updateAlpha(this.value)"
-              class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+              class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
             />
-            <span class="text-xs text-indigo-400 font-medium">Semantics Only</span>
+            <span class="text-[11px] text-indigo-400 font-medium shrink-0">Text Semantics</span>
           </div>
         </div>
       </section>
 
-      <!-- Active Seed Paper Card (if applicable) -->
-      <section id="seed-paper-banner" class="hidden glass-card rounded-xl p-5 border-l-4 border-indigo-500 bg-indigo-950/20">
+      <!-- Active Seed Paper Card (Academic Reference Style) -->
+      <section id="seed-paper-banner" class="hidden glass-panel rounded-xl p-4 border-l-4 border-indigo-500 space-y-2">
         <div class="flex items-start justify-between gap-4">
-          <div>
-            <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">Selected Seed Paper</span>
-            <h3 id="seed-title" class="text-lg font-bold text-white mt-1"></h3>
-            <p id="seed-meta" class="text-xs text-slate-400 mt-1"></p>
-            <p id="seed-abstract" class="text-xs text-slate-300 mt-2 line-clamp-2 leading-relaxed"></p>
-          </div>
-          <div class="text-right whitespace-nowrap">
-            <span id="seed-citations" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-200"></span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Results Grid -->
-      <section class="space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <span>Ranked Recommendations</span>
-            <span id="results-count" class="text-xs font-normal text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">0 papers</span>
-          </h3>
-          <div class="flex items-center gap-2 text-xs text-slate-400">
-            <i class="fa-solid fa-circle-info text-indigo-400"></i>
-            <span>Sorted by hybrid score: &alpha; &middot; S<sub>semantic</sub> + (1-&alpha;) &middot; S<sub>graph</sub> + &beta; &middot; Prior</span>
-          </div>
-        </div>
-
-        <!-- LangGraph Agentic Orchestration Trace Banner -->
-        <div id="agent-trace-banner" class="hidden glass-card rounded-xl p-4 border border-indigo-500/30 bg-indigo-950/20 space-y-3">
-          <div class="flex items-center justify-between">
+          <div class="space-y-1">
             <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span class="text-xs font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
-                <i class="fa-solid fa-network-wired"></i> LangGraph Agentic Orchestration Trace
-              </span>
-              <span id="agent-runtime-badge" class="text-[11px] font-mono bg-slate-900 border border-slate-700 text-emerald-400 px-2 py-0.5 rounded"></span>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">Active Seed Paper</span>
+              <span id="seed-citations" class="text-[11px] text-slate-400"></span>
             </div>
-            <button onclick="toggleTraceDetails()" class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition">
-              <span id="trace-toggle-text">View Agent Graph Steps</span>
-              <i id="trace-toggle-icon" class="fa-solid fa-chevron-down text-[10px] ml-1"></i>
+            <h3 id="seed-title" class="text-base font-bold text-white"></h3>
+            <p id="seed-meta" class="text-xs text-slate-400"></p>
+            <p id="seed-abstract" class="text-xs text-slate-300 leading-relaxed line-clamp-2"></p>
+            <button id="btn-seed-abstract-toggle" onclick="toggleSeedAbstract()" class="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium transition">
+              Show full abstract
             </button>
           </div>
-          <p id="agent-summary-text" class="text-xs text-slate-300 leading-relaxed"></p>
+          <button onclick="clearSeedPaper()" class="text-slate-500 hover:text-slate-300 p-1.5 rounded-lg hover:bg-slate-800 transition text-xs shrink-0" title="Clear Seed Paper">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </section>
 
-          <!-- Gemini AI Advisor Synthesis Box -->
-          <div id="gemini-advisor-box" class="hidden p-4 rounded-xl bg-gradient-to-r from-indigo-950/70 via-purple-950/40 to-slate-900 border border-indigo-500/40 space-y-2 shadow-lg">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-300 flex items-center gap-1.5">
-                <i class="fa-solid fa-wand-magic-sparkles text-cyan-400 text-xs"></i> Google Gemini AI Research Advisor Synthesis
-              </span>
-              <span class="text-[10px] uppercase font-mono font-semibold tracking-wider text-cyan-300 bg-cyan-950/80 border border-cyan-800/80 px-2 py-0.5 rounded-full">gemini-2.5-flash</span>
+      <!-- Google Gemini AI Research Advisor Synthesis (Executive Academic Briefing) -->
+      <section id="gemini-advisor-box" class="hidden gradient-advisor rounded-xl p-5 shadow-lg space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i>
             </div>
-            <p id="gemini-synthesis-text" class="text-xs text-slate-200 leading-relaxed font-sans"></p>
+            <div>
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider">AI Research Advisor Synthesis</h4>
+              <span class="text-[10px] text-indigo-300 font-mono">Google Gemini 2.5 Flash</span>
+            </div>
           </div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-medium">Literature Overview</span>
+        </div>
+        <p id="gemini-synthesis-text" class="text-xs text-slate-200 leading-relaxed font-sans bg-slate-950/40 p-3.5 rounded-lg border border-indigo-500/20"></p>
+      </section>
 
-          <div id="agent-steps-list" class="hidden grid grid-cols-1 md:grid-cols-4 gap-3 pt-3 border-t border-slate-800">
-            <!-- Dynamically populated with 4 agent nodes -->
+      <!-- LangGraph Agentic Trace (Discreet Accordion for viva & inspections) -->
+      <section id="agent-trace-banner" class="hidden glass-card rounded-xl p-3 border border-slate-800 text-xs">
+        <div class="flex items-center justify-between cursor-pointer" onclick="toggleTraceDetails()">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="font-semibold text-slate-300 flex items-center gap-1.5">
+              <i class="fa-solid fa-network-wired text-indigo-400 text-xs"></i> LangGraph Agentic Pipeline
+            </span>
+            <span id="agent-runtime-badge" class="text-[10px] font-mono text-emerald-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800"></span>
           </div>
+          <button class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition">
+            <span id="trace-toggle-text">View 4 Agent Steps</span>
+            <i id="trace-toggle-icon" class="fa-solid fa-chevron-down text-[10px]"></i>
+          </button>
+        </div>
+        
+        <div id="agent-steps-list" class="hidden grid grid-cols-1 md:grid-cols-4 gap-2.5 pt-3 mt-3 border-t border-slate-800/80">
+          <!-- Dynamically populated with 4 agent nodes -->
+        </div>
+      </section>
+
+      <!-- Recommendations Header & Results -->
+      <section class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-bold text-white flex items-center gap-2">
+            <span>Recommended Papers</span>
+            <span id="results-count" class="text-[11px] font-normal text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-full">0 papers</span>
+          </h2>
+          <span class="text-[11px] text-slate-500 hidden sm:inline">
+            Ranked by SciBERT + GraphSAGE Hybrid Score
+          </span>
         </div>
 
-        <div id="loading-spinner" class="hidden py-16 text-center">
-          <i class="fa-solid fa-circle-notch fa-spin text-4xl text-indigo-500 mb-3"></i>
-          <p class="text-slate-300 text-sm font-medium">LangGraph Agent orchestrating SciBERT & GraphSAGE dual-signal ranking...</p>
+        <!-- Loading State -->
+        <div id="loading-spinner" class="hidden py-16 text-center space-y-3">
+          <i class="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-500"></i>
+          <p class="text-slate-300 text-xs font-medium">Orchestrating dual-signal recommendations via LangGraph agent...</p>
         </div>
 
-        <div id="results-container" class="space-y-4">
+        <!-- Recommendations Container -->
+        <div id="results-container" class="space-y-3">
           <!-- Dynamically populated -->
         </div>
       </section>
@@ -243,19 +281,19 @@
     <!-- ========================================== -->
     <!-- TAB 2: CITATION GRAPH EXPLORER            -->
     <!-- ========================================== -->
-    <div id="view-graph" class="hidden space-y-6">
-      <div class="glass-card rounded-2xl p-6">
+    <div id="view-graph" class="hidden space-y-4">
+      <div class="glass-panel rounded-2xl p-6">
         <div class="flex justify-between items-center mb-4">
           <div>
-            <h2 class="text-xl font-bold text-white">Citation Ego-Network Visualization</h2>
-            <p class="text-xs text-slate-400 mt-1">Visualizing 1-hop citations connecting the active seed paper to neighborhood nodes in the 92,081-node graph.</p>
+            <h2 class="text-lg font-bold text-white">Citation Network Topology</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Visualizing 1-hop citations connecting the active seed paper to neighboring research nodes.</p>
           </div>
-          <div class="flex items-center gap-4 text-xs font-medium">
-            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-indigo-500 inline-block"></span> Seed Paper</span>
-            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-purple-500 inline-block"></span> Cited Neighbor</span>
+          <div class="flex items-center gap-3 text-xs font-medium">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block"></span> Seed Paper</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block"></span> Citation Neighbor</span>
           </div>
         </div>
-        <div id="graph-canvas-container" class="w-full h-[550px] bg-slate-950/80 rounded-xl border border-slate-800 relative overflow-hidden flex items-center justify-center">
+        <div id="graph-canvas-container" class="w-full h-[520px] bg-slate-950 rounded-xl border border-slate-800 relative overflow-hidden flex items-center justify-center">
           <svg id="citation-graph-svg" class="w-full h-full"></svg>
         </div>
       </div>
@@ -264,66 +302,65 @@
     <!-- ========================================== -->
     <!-- TAB 3: BENCHMARK & EVALUATION DASHBOARD   -->
     <!-- ========================================== -->
-    <div id="view-eval" class="hidden space-y-8">
+    <div id="view-eval" class="hidden space-y-6">
       
       <!-- Overview Banner -->
-      <div class="glass-card rounded-2xl p-6 border-l-4 border-emerald-500">
+      <div class="glass-panel rounded-2xl p-6 border-l-4 border-indigo-500">
         <div class="flex justify-between items-start">
           <div>
-            <h2 class="text-2xl font-bold text-white">Leakage-Safe Held-Out Evaluation Protocol</h2>
-            <p class="text-slate-400 text-sm mt-1 max-w-3xl leading-relaxed">
+            <h2 class="text-lg font-bold text-white">Leakage-Safe Held-Out Evaluation Protocol</h2>
+            <p class="text-slate-400 text-xs mt-1 max-w-3xl leading-relaxed">
               To rigorously validate that combining semantic and citation signals outperforms single-signal retrieval, 
               the 103,482 citation edges were partitioned into 85% train, 5% validation, and 10% test. 
               Held-out test edges were completely removed from the message-passing adjacency graph during GraphSAGE evaluation.
             </p>
           </div>
-          <button onclick="fetchEvaluation()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg text-white transition flex items-center gap-2">
-            <i class="fa-solid fa-arrows-rotate"></i> Refresh Benchmark
+          <button onclick="fetchEvaluation()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-medium rounded-lg text-white transition flex items-center gap-1.5 shrink-0">
+            <i class="fa-solid fa-arrows-rotate text-[11px]"></i> Refresh
           </button>
         </div>
       </div>
 
       <!-- Key Stat Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="glass-card rounded-xl p-5 border-t-2 border-indigo-500">
-          <span class="text-xs text-slate-400 uppercase font-semibold">GraphSAGE Test ROC-AUC</span>
-          <div class="text-3xl font-extrabold text-white mt-2">73.79%</div>
-          <span class="text-xs text-emerald-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-check"></i> Link Prediction on Held-Out Edges</span>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+        <div class="glass-card rounded-xl p-4 border-t-2 border-indigo-500">
+          <span class="text-[11px] text-slate-400 uppercase font-semibold">GraphSAGE ROC-AUC</span>
+          <div class="text-2xl font-black text-white mt-1">73.79%</div>
+          <span class="text-[10px] text-emerald-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-check"></i> Held-out edges</span>
         </div>
-        <div class="glass-card rounded-xl p-5 border-t-2 border-purple-500">
-          <span class="text-xs text-slate-400 uppercase font-semibold">Hybrid Ranking MRR</span>
-          <div class="text-3xl font-extrabold text-white mt-2">0.4672</div>
-          <span class="text-xs text-indigo-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-arrow-trend-up"></i> +100.2% over Semantic-Only</span>
+        <div class="glass-card rounded-xl p-4 border-t-2 border-purple-500">
+          <span class="text-[11px] text-slate-400 uppercase font-semibold">Hybrid MRR</span>
+          <div class="text-2xl font-black text-white mt-1">0.4672</div>
+          <span class="text-[10px] text-indigo-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-arrow-trend-up"></i> +100.2% over Semantics</span>
         </div>
-        <div class="glass-card rounded-xl p-5 border-t-2 border-emerald-500">
-          <span class="text-xs text-slate-400 uppercase font-semibold">Hybrid Hits@5</span>
-          <div class="text-3xl font-extrabold text-white mt-2">53.30%</div>
-          <span class="text-xs text-emerald-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-arrow-trend-up"></i> vs 29.40% Semantic</span>
+        <div class="glass-card rounded-xl p-4 border-t-2 border-emerald-500">
+          <span class="text-[11px] text-slate-400 uppercase font-semibold">Hybrid Hits@5</span>
+          <div class="text-2xl font-black text-white mt-1">53.30%</div>
+          <span class="text-[10px] text-emerald-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-arrow-trend-up"></i> vs 29.40% Semantic</span>
         </div>
-        <div class="glass-card rounded-xl p-5 border-t-2 border-sky-500">
-          <span class="text-xs text-slate-400 uppercase font-semibold">Hybrid Hits@20</span>
-          <div class="text-3xl font-extrabold text-white mt-2">71.00%</div>
-          <span class="text-xs text-sky-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-check-double"></i> 1-in-100 Candidate Ranking</span>
+        <div class="glass-card rounded-xl p-4 border-t-2 border-sky-500">
+          <span class="text-[11px] text-slate-400 uppercase font-semibold">Hybrid Hits@20</span>
+          <div class="text-2xl font-black text-white mt-1">71.00%</div>
+          <span class="text-[10px] text-sky-400 flex items-center gap-1 mt-1"><i class="fa-solid fa-check-double"></i> 1-in-100 ranking</span>
         </div>
       </div>
 
       <!-- Comparison Table & Chart Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <!-- Table -->
-        <div class="glass-card rounded-xl p-6">
-          <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+        <div class="glass-card rounded-xl p-5">
+          <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
             <i class="fa-solid fa-table text-indigo-400"></i> Comparative Ranking Benchmark
           </h3>
           <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-              <thead class="text-xs text-slate-400 uppercase bg-slate-900/80 border-b border-slate-800">
+            <table class="w-full text-left text-xs">
+              <thead class="text-[10px] text-slate-400 uppercase bg-slate-900 border-b border-slate-800">
                 <tr>
-                  <th class="px-4 py-3">Method / Signal</th>
-                  <th class="px-4 py-3 text-right">MRR</th>
-                  <th class="px-4 py-3 text-right">Hits@5</th>
-                  <th class="px-4 py-3 text-right">Hits@10</th>
-                  <th class="px-4 py-3 text-right">Hits@20</th>
+                  <th class="px-3 py-2.5">Method</th>
+                  <th class="px-3 py-2.5 text-right">MRR</th>
+                  <th class="px-3 py-2.5 text-right">Hits@5</th>
+                  <th class="px-3 py-2.5 text-right">Hits@10</th>
+                  <th class="px-3 py-2.5 text-right">Hits@20</th>
                 </tr>
               </thead>
               <tbody id="eval-table-body" class="divide-y divide-slate-800/60">
@@ -334,11 +371,11 @@
         </div>
 
         <!-- Bar Chart -->
-        <div class="glass-card rounded-xl p-6">
-          <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+        <div class="glass-card rounded-xl p-5">
+          <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
             <i class="fa-solid fa-chart-column text-purple-400"></i> Hits@K Performance Comparison
           </h3>
-          <div class="h-64">
+          <div class="h-60">
             <canvas id="evalChart"></canvas>
           </div>
         </div>
@@ -346,28 +383,33 @@
     </div>
   </main>
 
-  <footer class="border-t border-slate-800/80 bg-slate-950/60 py-6 text-center text-xs text-slate-500">
-    Personalized Research Paper Recommendation System • SciBERT + FAISS + GraphSAGE Hybrid Architecture • LangGraph Agent
+  <!-- ========================================== -->
+  <!-- FOOTER                                     -->
+  <!-- ========================================== -->
+  <footer class="border-t border-slate-800/80 bg-slate-950/60 py-4 text-center text-xs text-slate-500">
+    ScholarGraph &bull; SciBERT Semantic Similarity + GraphSAGE Inductive Citation Topology + LangGraph Agentic AI
   </footer>
 
-  <!-- Reading List Drawer / Modal -->
+  <!-- ========================================== -->
+  <!-- READING LIST MODAL (MY LIBRARY)            -->
+  <!-- ========================================== -->
   <div id="reading-list-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-    <div class="glass-card max-w-2xl w-full rounded-2xl p-6 shadow-2xl border border-slate-700 space-y-4 max-h-[85vh] flex flex-col">
+    <div class="glass-panel max-w-xl w-full rounded-2xl p-6 shadow-2xl border border-slate-700 space-y-4 max-h-[85vh] flex flex-col">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold text-base border border-indigo-500/20">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold text-sm border border-indigo-500/20">
             <i class="fa-solid fa-bookmark"></i>
           </div>
           <div>
-            <h3 class="text-lg font-bold text-white flex items-center gap-2">
-              <span>My Research Reading List</span>
-              <span id="reading-list-count-badge" class="text-xs bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full">0 papers</span>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <span>My Research Library</span>
+              <span id="reading-list-count-badge" class="text-[11px] bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-2 py-0.2 rounded-full">0 papers</span>
             </h3>
-            <p class="text-xs text-slate-400">Saved papers used to compile your dynamic personalized research profile</p>
+            <p class="text-[11px] text-slate-400">Personal reading list used to compute your researcher profile centroid</p>
           </div>
         </div>
-        <button onclick="toggleReadingListModal()" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition">
-          <i class="fa-solid fa-xmark text-lg"></i>
+        <button onclick="toggleReadingListModal()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition">
+          <i class="fa-solid fa-xmark text-base"></i>
         </button>
       </div>
 
@@ -376,33 +418,51 @@
       </div>
 
       <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-3">
-        <button onclick="clearReadingList()" class="px-3.5 py-2 rounded-lg text-xs font-semibold text-rose-400 hover:bg-rose-950/30 border border-rose-900/50 transition">
-          <i class="fa-regular fa-trash-can mr-1"></i> Clear List
+        <button onclick="clearReadingList()" class="px-3 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-950/30 border border-rose-900/40 transition">
+          <i class="fa-regular fa-trash-can mr-1"></i> Clear All
         </button>
-        <button id="btn-personalize" onclick="personalizeFromReadingList()" class="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold rounded-lg shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition">
-          <i class="fa-solid fa-wand-magic-sparkles"></i>
-          <span>Personalize From Reading List</span>
+        <button id="btn-personalize" onclick="personalizeFromReadingList()" class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold rounded-lg shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+          <span>Personalize Recommendations</span>
         </button>
       </div>
     </div>
   </div>
 
+  <!-- Toast Notification Container -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded-xl bg-slate-900 border border-indigo-500/40 text-xs text-white shadow-2xl flex items-center gap-2 transition-all duration-300">
+    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toast-message">Saved to library</span>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- JAVASCRIPT APPLICATION LOGIC               -->
+  <!-- ========================================== -->
   <script>
     let currentMode = 'seed';
     let currentAlpha = 0.60;
     let selectedSeedId = '62ed9bf1d83c8db1f9cbf92ea2f57ea90ef683d9';
     let selectedSeedTitle = 'How Powerful are Graph Neural Networks?';
     let currentRecommendations = [];
+    let lastOrchestration = null;
     let evalChart = null;
+
+    // Toast Notification
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').innerText = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => { toast.classList.add('hidden'); }, 2400);
+    }
 
     // Tab Switching
     function switchTab(tabId) {
       ['recs', 'graph', 'eval'].forEach(t => {
         document.getElementById(`view-${t}`).classList.add('hidden');
-        document.getElementById(`tab-${t}`).className = 'px-4 py-1.5 text-sm font-medium rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-2 transition';
+        document.getElementById(`tab-${t}`).className = 'px-3.5 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-1.5 transition';
       });
       document.getElementById(`view-${tabId}`).classList.remove('hidden');
-      document.getElementById(`tab-${tabId}`).className = 'px-4 py-1.5 text-sm font-medium rounded-lg bg-indigo-600 text-white shadow-sm flex items-center gap-2 transition';
+      document.getElementById(`tab-${tabId}`).className = 'px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white shadow-sm flex items-center gap-1.5 transition';
 
       if (tabId === 'eval') {
         fetchEvaluation();
@@ -411,21 +471,20 @@
       }
     }
 
+    // Search Mode Toggle
     function setSearchMode(mode) {
       currentMode = mode;
       const btnSeed = document.getElementById('btn-mode-seed');
       const btnQuery = document.getElementById('btn-mode-query');
       if (mode === 'seed') {
-        btnSeed.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition';
-        btnQuery.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition';
+        btnSeed.className = 'px-3.5 py-1.5 font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5';
+        btnQuery.className = 'px-3.5 py-1.5 font-semibold rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5';
         document.getElementById('search-input').placeholder = "Enter paper title to select seed paper...";
       } else {
-        btnQuery.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition';
-        btnSeed.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition';
+        btnQuery.className = 'px-3.5 py-1.5 font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5';
+        btnSeed.className = 'px-3.5 py-1.5 font-semibold rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5';
         document.getElementById('search-input').placeholder = "Enter your research topic or query...";
-        selectedSeedId = null;
-        selectedSeedTitle = '';
-        document.getElementById('seed-paper-banner').classList.add('hidden');
+        clearSeedPaper();
       }
     }
 
@@ -433,20 +492,58 @@
       document.getElementById('search-input').value = title;
       selectedSeedTitle = title;
       selectedSeedId = null;
+      document.getElementById('btn-clear-search').classList.remove('hidden');
       executeSearch();
     }
 
+    function clearSearchInput() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('btn-clear-search').classList.add('hidden');
+      document.getElementById('autocomplete-dropdown').classList.add('hidden');
+    }
+
+    function clearSeedPaper() {
+      selectedSeedId = null;
+      selectedSeedTitle = '';
+      document.getElementById('seed-paper-banner').classList.add('hidden');
+    }
+
+    let isSeedAbstractExpanded = false;
+    function toggleSeedAbstract() {
+      const abs = document.getElementById('seed-abstract');
+      const btn = document.getElementById('btn-seed-abstract-toggle');
+      isSeedAbstractExpanded = !isSeedAbstractExpanded;
+      if (isSeedAbstractExpanded) {
+        abs.classList.remove('line-clamp-2');
+        btn.innerText = 'Collapse abstract';
+      } else {
+        abs.classList.add('line-clamp-2');
+        btn.innerText = 'Show full abstract';
+      }
+    }
+
+    // Alpha Slider & Presets
     function updateAlpha(val) {
       currentAlpha = parseFloat(val);
       document.getElementById('alpha-val').innerText = currentAlpha.toFixed(2);
-      document.getElementById('sem-weight-val').innerText = `${Math.round(currentAlpha * 100)}%`;
-      document.getElementById('graph-weight-val').innerText = `${Math.round((1 - currentAlpha) * 100)}%`;
       executeSearch();
+    }
+
+    function setAlphaPreset(val) {
+      document.getElementById('alpha-slider').value = val;
+      updateAlpha(val);
     }
 
     // Autocomplete
     let searchDebounce = null;
     function handleSearchInput(val) {
+      const clearBtn = document.getElementById('btn-clear-search');
+      if (val.trim()) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+
       if (val !== selectedSeedTitle) {
         selectedSeedId = null;
       }
@@ -473,12 +570,13 @@
         return;
       }
       drop.innerHTML = papers.map(p => `
-        <div onclick="selectAutocomplete('${p.paperId}', '${escapeHtml(p.title)}')" class="px-4 py-3 hover:bg-slate-800 cursor-pointer border-b border-slate-800/60 last:border-0">
-          <div class="text-sm font-semibold text-white">${p.title}</div>
-          <div class="text-xs text-slate-400 flex items-center gap-3 mt-1">
+        <div onclick="selectAutocomplete('${p.paperId}', '${escapeHtml(p.title)}')" class="px-3.5 py-2.5 hover:bg-slate-800/80 cursor-pointer border-b border-slate-800/60 last:border-0 transition">
+          <div class="text-xs font-semibold text-white truncate">${p.title}</div>
+          <div class="text-[10px] text-slate-400 flex items-center gap-2.5 mt-0.5">
             <span>Year: ${p.year || 'N/A'}</span>
-            <span>Citations: ${p.citationCount.toLocaleString()}</span>
-            ${p.in_graph ? '<span class="text-emerald-400 font-medium">In Citation Graph</span>' : '<span class="text-amber-400 font-medium">Content Only</span>'}
+            <span>&bull;</span>
+            <span>${p.citationCount.toLocaleString()} citations</span>
+            ${p.in_graph ? '<span class="text-emerald-400 font-medium bg-emerald-500/10 px-1.5 py-0.2 rounded">In Graph</span>' : '<span class="text-amber-400 font-medium bg-amber-500/10 px-1.5 py-0.2 rounded">Content Only</span>'}
           </div>
         </div>
       `).join('');
@@ -489,6 +587,7 @@
       selectedSeedId = paperId;
       selectedSeedTitle = title;
       document.getElementById('search-input').value = title;
+      document.getElementById('btn-clear-search').classList.remove('hidden');
       document.getElementById('autocomplete-dropdown').classList.add('hidden');
       setSearchMode('seed');
       executeSearch();
@@ -517,27 +616,27 @@
         if (!readingList.length) {
           listContainer.innerHTML = `
             <div class="py-12 text-center text-slate-500 space-y-2">
-              <i class="fa-regular fa-bookmark text-3xl text-slate-600"></i>
+              <i class="fa-regular fa-bookmark text-2xl text-slate-600"></i>
               <p class="text-xs">Your reading list is empty.</p>
-              <p class="text-[11px] text-slate-600">Click the bookmark icon on any paper to save it to your research profile.</p>
+              <p class="text-[11px] text-slate-600">Click the bookmark icon on any paper to add it to your library.</p>
             </div>
           `;
           if (btnPersonalize) btnPersonalize.disabled = true;
         } else {
           listContainer.innerHTML = readingList.map((item, idx) => `
-            <div class="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex items-center justify-between gap-3 hover:border-slate-700 transition">
-              <div class="flex items-start gap-2.5 min-w-0">
-                <span class="w-6 h-6 rounded-md bg-indigo-600/20 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">${idx + 1}</span>
+            <div class="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between gap-2.5 hover:border-slate-700 transition">
+              <div class="flex items-start gap-2 min-w-0">
+                <span class="w-5 h-5 rounded bg-indigo-600/20 text-indigo-400 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">${idx + 1}</span>
                 <div class="min-w-0">
                   <h5 class="text-xs font-semibold text-white truncate">${item.title}</h5>
                   <div class="text-[10px] text-slate-400 flex items-center gap-2 mt-0.5">
-                    <span>Year: ${item.year || 'N/A'}</span>
+                    <span>${item.year || 'N/A'}</span>
                     <span>&bull;</span>
                     <span>${(item.citationCount || 0).toLocaleString()} citations</span>
                   </div>
                 </div>
               </div>
-              <button onclick="removeBookmark('${item.paperId}')" class="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition" title="Remove">
+              <button onclick="removeBookmark('${item.paperId}')" class="text-slate-500 hover:text-rose-400 p-1 rounded hover:bg-slate-800 transition" title="Remove">
                 <i class="fa-solid fa-xmark text-xs"></i>
               </button>
             </div>
@@ -552,12 +651,13 @@
       const existingIdx = readingList.findIndex(p => p.paperId === paperId);
       if (existingIdx >= 0) {
         readingList.splice(existingIdx, 1);
+        showToast('Removed from Library');
       } else {
         readingList.push({ paperId, title, year, citationCount });
+        showToast('Saved to Library');
       }
       localStorage.setItem('scholar_reading_list', JSON.stringify(readingList));
       updateReadingListUI();
-      // Re-render recommendations to update icon states
       if (currentRecommendations && currentRecommendations.length) {
         renderRecommendations(currentRecommendations, lastOrchestration);
       }
@@ -567,16 +667,18 @@
       readingList = readingList.filter(p => p.paperId !== paperId);
       localStorage.setItem('scholar_reading_list', JSON.stringify(readingList));
       updateReadingListUI();
+      showToast('Removed from Library');
       if (currentRecommendations && currentRecommendations.length) {
         renderRecommendations(currentRecommendations, lastOrchestration);
       }
     }
 
     function clearReadingList() {
-      if (!confirm('Clear all saved papers from your reading list?')) return;
+      if (!confirm('Clear all papers from your reading list?')) return;
       readingList = [];
       localStorage.setItem('scholar_reading_list', JSON.stringify(readingList));
       updateReadingListUI();
+      showToast('Library cleared');
       if (currentRecommendations && currentRecommendations.length) {
         renderRecommendations(currentRecommendations, lastOrchestration);
       }
@@ -625,10 +727,7 @@
       }
     }
 
-    // ==========================================
-    // LANGGRAPH AGENT TRACE TOGGLE
-    // ==========================================
-    let lastOrchestration = null;
+    // Toggle LangGraph Trace
     function toggleTraceDetails() {
       const list = document.getElementById('agent-steps-list');
       const icon = document.getElementById('trace-toggle-icon');
@@ -636,12 +735,12 @@
       const isHidden = list.classList.contains('hidden');
       if (isHidden) {
         list.classList.remove('hidden');
-        icon.className = 'fa-solid fa-chevron-up text-[10px] ml-1';
-        text.innerText = 'Hide Agent Graph Steps';
+        icon.className = 'fa-solid fa-chevron-up text-[10px]';
+        text.innerText = 'Hide Agent Steps';
       } else {
         list.classList.add('hidden');
-        icon.className = 'fa-solid fa-chevron-down text-[10px] ml-1';
-        text.innerText = 'View Agent Graph Steps';
+        icon.className = 'fa-solid fa-chevron-down text-[10px]';
+        text.innerText = 'View 4 Agent Steps';
       }
     }
 
@@ -698,15 +797,15 @@
         spinner.classList.add('hidden');
         btn.disabled = false;
         container.innerHTML = `
-          <div class="p-6 text-center text-amber-300 bg-amber-950/30 rounded-xl border border-amber-800/50 space-y-2">
-            <div class="font-bold text-base flex items-center justify-center gap-2">
-              <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Request Notice
+          <div class="p-5 text-center text-amber-300 bg-amber-950/20 rounded-xl border border-amber-800/40 space-y-1.5">
+            <div class="font-semibold text-sm flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Notice
             </div>
             <p class="text-xs text-slate-300">
-              ${escapeHtml(err.message || 'Unable to communicate with the recommendation engine.')}
+              ${escapeHtml(err.message || 'Unable to connect to recommendation backend.')}
             </p>
-            <div class="text-xs text-slate-400">If the server was restarted, refresh your browser or ensure the server is active:</div>
-            <div class="code-font bg-slate-900 px-3 py-1.5 rounded text-indigo-300 inline-block text-xs border border-slate-800">
+            <div class="text-[11px] text-slate-400">Ensure the backend process is running:</div>
+            <div class="code-font bg-slate-900 px-3 py-1 rounded text-indigo-300 inline-block text-[11px] border border-slate-800">
               .\\myenv\\Scripts\\python.exe -m uvicorn backend.app:app --port 8000 --reload
             </div>
           </div>
@@ -717,9 +816,9 @@
     function showSeedBanner(meta) {
       const banner = document.getElementById('seed-paper-banner');
       document.getElementById('seed-title').innerText = meta.title || "Untitled";
-      document.getElementById('seed-meta').innerText = `Year: ${meta.year || 'N/A'} • ID: ${meta.paperId || ''}`;
-      document.getElementById('seed-abstract').innerText = meta.abstract || "No abstract available.";
-      document.getElementById('seed-citations').innerHTML = `<i class="fa-solid fa-quote-right text-indigo-400"></i> ${Number(meta.citationCount || 0).toLocaleString()} citations`;
+      document.getElementById('seed-meta').innerText = `Year: ${meta.year || 'N/A'} • ID: ${meta.paperId ? meta.paperId.slice(0, 12) + '...' : ''}`;
+      document.getElementById('seed-abstract').innerText = meta.abstract || "No abstract available in dataset.";
+      document.getElementById('seed-citations').innerHTML = `<i class="fa-solid fa-quote-right text-indigo-400 mr-1"></i> ${Number(meta.citationCount || 0).toLocaleString()} citations`;
       banner.classList.remove('hidden');
     }
 
@@ -729,34 +828,30 @@
       const container = document.getElementById('results-container');
       document.getElementById('results-count').innerText = `${recs.length} papers`;
 
+      // Render Gemini Research Advisor Synthesis
+      const geminiBox = document.getElementById('gemini-advisor-box');
+      if (orchestration && orchestration.ai_advisor_synthesis) {
+        geminiBox.classList.remove('hidden');
+        document.getElementById('gemini-synthesis-text').innerText = orchestration.ai_advisor_synthesis;
+      } else {
+        geminiBox.classList.add('hidden');
+      }
+
       // Render LangGraph Agentic Trace
       const traceBanner = document.getElementById('agent-trace-banner');
       if (orchestration && orchestration.workflow_trace) {
         traceBanner.classList.remove('hidden');
-        document.getElementById('agent-runtime-badge').innerText = `${orchestration.total_execution_ms} ms total`;
-        document.getElementById('agent-summary-text').innerText = orchestration.summary || "LangGraph Agentic StateGraph pipeline completed successfully.";
-
-        // Render Gemini Research Advisor Synthesis if present
-        const geminiBox = document.getElementById('gemini-advisor-box');
-        const geminiStatusBadge = document.getElementById('gemini-status-badge');
-        if (orchestration.ai_advisor_synthesis) {
-          geminiBox.classList.remove('hidden');
-          document.getElementById('gemini-synthesis-text').innerText = orchestration.ai_advisor_synthesis;
-          if (geminiStatusBadge) geminiStatusBadge.classList.remove('hidden');
-        } else {
-          geminiBox.classList.add('hidden');
-          if (geminiStatusBadge) geminiStatusBadge.classList.add('hidden');
-        }
+        document.getElementById('agent-runtime-badge').innerText = `${orchestration.total_execution_ms} ms`;
 
         const stepsList = document.getElementById('agent-steps-list');
         stepsList.innerHTML = orchestration.workflow_trace.map(st => `
-          <div class="p-3 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
+          <div class="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
             <div class="flex items-center justify-between">
-              <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">${st.stage}</span>
-              <span class="text-[10px] font-mono text-emerald-400">${st.duration_ms}ms</span>
+              <span class="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">${st.stage}</span>
+              <span class="text-[9px] font-mono text-emerald-400">${st.duration_ms}ms</span>
             </div>
-            <div class="text-xs font-semibold text-white">${st.action}</div>
-            <p class="text-[11px] text-slate-400 leading-tight">${st.detail}</p>
+            <div class="text-[11px] font-semibold text-white leading-tight">${st.action}</div>
+            <p class="text-[10px] text-slate-400 leading-tight">${st.detail}</p>
           </div>
         `).join('');
       } else {
@@ -764,7 +859,7 @@
       }
 
       if (!recs.length) {
-        container.innerHTML = `<div class="p-8 text-center text-slate-400">No matching papers found. Try adjusting query or alpha slider.</div>`;
+        container.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs">No matching papers found. Try adjusting query or signal weight slider.</div>`;
         return;
       }
 
@@ -777,78 +872,92 @@
         const isSaved = bookmarkedIds.has(r.paperId);
 
         return `
-          <div class="glass-card glass-card-hover rounded-xl p-5 border border-slate-800">
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex items-start gap-3">
-                <span class="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 font-bold text-sm flex items-center justify-center shrink-0 border border-indigo-500/20">
+          <div class="glass-card rounded-xl p-4 transition space-y-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-start gap-3 min-w-0">
+                <span class="w-7 h-7 rounded-lg bg-indigo-600/15 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0 border border-indigo-500/20 mt-0.5">
                   #${r.rank}
                 </span>
-                <div>
-                  <h4 class="text-base font-bold text-white hover:text-indigo-400 cursor-pointer transition" onclick="selectAutocomplete('${r.paperId}', '${escapeHtml(r.title)}')">
+                <div class="min-w-0">
+                  <h3 class="text-sm font-bold text-white hover:text-indigo-400 cursor-pointer transition leading-snug" onclick="selectAutocomplete('${r.paperId}', '${escapeHtml(r.title)}')">
                     ${r.title}
-                  </h4>
-                  <div class="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                  </h3>
+                  <div class="flex items-center gap-2.5 text-[11px] text-slate-400 mt-1 flex-wrap">
                     <span><i class="fa-regular fa-calendar mr-1"></i>${r.year || 'N/A'}</span>
+                    <span>&bull;</span>
                     <span><i class="fa-solid fa-quote-right mr-1 text-slate-500"></i>${r.citationCount.toLocaleString()} citations</span>
-                    ${r.fallback_applied ? '<span class="text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">Content Fallback</span>' : '<span class="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Citation Topology Match</span>'}
+                    <span>&bull;</span>
+                    ${r.fallback_applied ? '<span class="text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20 text-[10px]">Content Fallback</span>' : '<span class="text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20 text-[10px]">Citation Topology</span>'}
+                    <a href="https://scholar.google.com/scholar?q=${encodeURIComponent(r.title)}" target="_blank" rel="noopener noreferrer" class="text-slate-500 hover:text-indigo-400 transition ml-1" title="Search on Google Scholar">
+                      <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </a>
                   </div>
                 </div>
               </div>
 
-              <!-- Action & Hybrid Score -->
-              <div class="flex items-center gap-3 shrink-0">
+              <!-- Action & Hybrid Score Badge -->
+              <div class="flex items-center gap-2.5 shrink-0">
                 <button onclick="toggleBookmark('${r.paperId}', '${escapeHtml(r.title)}', ${r.year || 0}, ${r.citationCount || 0}, event)" 
-                        class="w-9 h-9 rounded-xl ${isSaved ? 'bg-indigo-600 text-white' : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-indigo-300 border border-slate-700/80'} flex items-center justify-center transition shadow-sm" 
-                        title="${isSaved ? 'Remove from Reading List' : 'Save to Reading List'}">
-                  <i class="fa-${isSaved ? 'solid' : 'regular'} fa-bookmark text-sm"></i>
+                        class="w-8 h-8 rounded-lg ${isSaved ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30' : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-indigo-300 border border-slate-800'} flex items-center justify-center transition" 
+                        title="${isSaved ? 'Remove from Library' : 'Save to Library'}">
+                  <i class="fa-${isSaved ? 'solid' : 'regular'} fa-bookmark text-xs"></i>
                 </button>
 
                 <div class="text-right">
-                  <div class="text-2xl font-black text-indigo-400">${hybridPct}%</div>
-                  <div class="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">Hybrid Match</div>
+                  <div class="text-xl font-black text-indigo-400">${hybridPct}%</div>
+                  <div class="text-[9px] text-slate-400 font-medium uppercase tracking-wider">Match</div>
                 </div>
               </div>
             </div>
 
-            <!-- Abstract Drawer -->
-            <p class="text-xs text-slate-300 mt-3 leading-relaxed line-clamp-2">
-              ${r.abstract || 'No abstract text available in catalog.'}
-            </p>
+            <!-- Abstract with Read More / Read Less -->
+            <div class="text-xs text-slate-300 leading-relaxed">
+              <p id="abstract-${r.paperId}" class="line-clamp-2">
+                ${r.abstract || 'No abstract text available in catalog.'}
+              </p>
+              ${r.abstract && r.abstract.length > 180 ? `
+                <button onclick="toggleCardAbstract('${r.paperId}')" id="btn-abs-${r.paperId}" class="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium mt-1 inline-block transition">
+                  Read more
+                </button>
+              ` : ''}
+            </div>
 
-            <!-- Score Progress Bars & Explanation -->
-            <div class="mt-4 pt-3 border-t border-slate-800/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <!-- Dual Signal Breakdown & Rationale Pill -->
+            <div class="pt-2.5 border-t border-slate-800/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
               <!-- Score Bars -->
-              <div class="flex items-center gap-6 w-full md:w-auto text-xs">
-                <div>
-                  <div class="flex justify-between text-[11px] mb-1">
-                    <span class="text-indigo-400 font-medium">Semantic Sim:</span>
-                    <span class="font-bold text-slate-200 ml-2">${semPct}%</span>
-                  </div>
-                  <div class="w-28 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div class="h-full bg-indigo-500 rounded-full" style="width: ${semPct}%"></div>
-                  </div>
+              <div class="flex items-center gap-4 text-[11px]">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-indigo-400 font-medium">Semantics:</span>
+                  <span class="font-bold text-slate-200">${semPct}%</span>
                 </div>
-
-                <div>
-                  <div class="flex justify-between text-[11px] mb-1">
-                    <span class="text-purple-400 font-medium">Graph Affinity:</span>
-                    <span class="font-bold text-slate-200 ml-2">${graphPct}%</span>
-                  </div>
-                  <div class="w-28 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div class="h-full bg-purple-500 rounded-full" style="width: ${graphPct}%"></div>
-                  </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-purple-400 font-medium">Citation Graph:</span>
+                  <span class="font-bold text-slate-200">${graphPct}%</span>
                 </div>
               </div>
 
-              <!-- Reason Pill -->
-              <div class="text-xs text-slate-300 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800 flex items-center gap-2">
-                <i class="fa-solid fa-lightbulb text-amber-400"></i>
+              <!-- Recommendation Rationale Pill -->
+              <div class="text-[11px] text-slate-300 bg-slate-900/90 px-2.5 py-1 rounded-md border border-slate-800 flex items-center gap-1.5">
+                <i class="fa-solid fa-lightbulb text-amber-400 text-[10px]"></i>
                 <span>${r.explanation}</span>
               </div>
             </div>
           </div>
         `;
       }).join('');
+    }
+
+    function toggleCardAbstract(paperId) {
+      const p = document.getElementById(`abstract-${paperId}`);
+      const btn = document.getElementById(`btn-abs-${paperId}`);
+      if (!p || !btn) return;
+      if (p.classList.contains('line-clamp-2')) {
+        p.classList.remove('line-clamp-2');
+        btn.innerText = 'Show less';
+      } else {
+        p.classList.add('line-clamp-2');
+        btn.innerText = 'Read more';
+      }
     }
 
     // Subgraph Force Network Visualization
@@ -868,7 +977,7 @@
 
       const container = document.getElementById("graph-canvas-container");
       const width = container.clientWidth || 800;
-      const height = container.clientHeight || 550;
+      const height = container.clientHeight || 520;
 
       if (!graphData.nodes || !graphData.nodes.length) {
         svg.append("text")
@@ -876,21 +985,22 @@
           .attr("y", height / 2)
           .attr("text-anchor", "middle")
           .attr("fill", "#64748b")
+          .attr("font-size", "12px")
           .text("No citation graph connections found for this paper.");
         return;
       }
 
       const simulation = d3.forceSimulation(graphData.nodes)
-        .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(120))
-        .force("charge", d3.forceManyBody().strength(-300))
+        .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(110))
+        .force("charge", d3.forceManyBody().strength(-260))
         .force("center", d3.forceCenter(width / 2, height / 2));
 
       const link = svg.append("g")
         .selectAll("line")
         .data(graphData.links)
         .join("line")
-        .attr("stroke", "rgba(99, 102, 241, 0.3)")
-        .attr("stroke-width", 2);
+        .attr("stroke", "rgba(99, 102, 241, 0.25)")
+        .attr("stroke-width", 1.5);
 
       const node = svg.append("g")
         .selectAll("g")
@@ -903,17 +1013,17 @@
         );
 
       node.append("circle")
-        .attr("r", d => d.group === 'seed' ? 14 : 9)
+        .attr("r", d => d.group === 'seed' ? 12 : 8)
         .attr("fill", d => d.group === 'seed' ? '#6366f1' : '#a855f7')
         .attr("stroke", "#ffffff")
-        .attr("stroke-width", 2);
+        .attr("stroke-width", 1.5);
 
       node.append("text")
         .text(d => d.label)
-        .attr("x", 16)
+        .attr("x", 14)
         .attr("y", 4)
-        .attr("fill", "#e2e8f0")
-        .attr("font-size", "11px")
+        .attr("fill", "#cbd5e1")
+        .attr("font-size", "10px")
         .attr("font-family", "Inter, sans-serif");
 
       simulation.on("tick", () => {
@@ -938,11 +1048,11 @@
         const tbody = document.getElementById('eval-table-body');
         tbody.innerHTML = Object.entries(ranking).map(([method, metrics]) => `
           <tr class="hover:bg-slate-900/50">
-            <td class="px-4 py-3 font-semibold text-white">${method}</td>
-            <td class="px-4 py-3 text-right font-mono text-indigo-400 font-bold">${metrics.MRR.toFixed(4)}</td>
-            <td class="px-4 py-3 text-right font-mono text-slate-300">${metrics["Hits@5"]}%</td>
-            <td class="px-4 py-3 text-right font-mono text-slate-300">${metrics["Hits@10"]}%</td>
-            <td class="px-4 py-3 text-right font-mono text-slate-300">${metrics["Hits@20"]}%</td>
+            <td class="px-3 py-2 font-medium text-white">${method}</td>
+            <td class="px-3 py-2 text-right font-mono text-indigo-400 font-bold">${metrics.MRR.toFixed(4)}</td>
+            <td class="px-3 py-2 text-right font-mono text-slate-300">${metrics["Hits@5"]}%</td>
+            <td class="px-3 py-2 text-right font-mono text-slate-300">${metrics["Hits@10"]}%</td>
+            <td class="px-3 py-2 text-right font-mono text-slate-300">${metrics["Hits@20"]}%</td>
           </tr>
         `).join('');
 
@@ -980,14 +1090,14 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { labels: { color: '#94a3b8', font: { size: 11 } } }
+            legend: { labels: { color: '#94a3b8', font: { size: 10 } } }
           },
           scales: {
             y: {
               beginAtZero: true,
               max: 100,
               ticks: { color: '#64748b', callback: val => val + '%' },
-              grid: { color: 'rgba(255,255,255,0.05)' }
+              grid: { color: 'rgba(255,255,255,0.04)' }
             },
             x: {
               ticks: { color: '#94a3b8' },
